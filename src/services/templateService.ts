@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../firebase'
-import { Template, WorkoutType } from '../types'
+import type { Template, WorkoutType } from '../types'
 
 function templateRef(uid: string, type: WorkoutType) {
   return doc(db, 'users', uid, 'templates', type)

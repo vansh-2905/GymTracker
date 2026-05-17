@@ -1,5 +1,7 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
+import { createContext, useContext, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
+import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
+import type { User } from 'firebase/auth'
 import { auth, googleProvider } from '../firebase'
 
 interface AuthContextValue {
@@ -24,7 +26,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn = async () => {
-    await signInWithPopup(auth, googleProvider)
+    const result = await signInWithPopup(auth, googleProvider)
+    const { getProfile, initProfile } = await import('../services/profileService')
+    const { seedDefaultExercises } = await import('../utils/seedExercises')
+    const profile = await getProfile(result.user.uid)
+    if (!profile) {
+      await initProfile(result.user.uid)
+      await seedDefaultExercises(result.user.uid)
+    }
   }
 
   const signOutUser = async () => {

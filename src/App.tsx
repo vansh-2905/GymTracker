@@ -1,5 +1,11 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useAuth } from './auth/AuthContext'
 import SignInScreen from './auth/SignInScreen'
+import BottomNav from './components/BottomNav'
+import TodayScreen from './screens/TodayScreen'
+import ActiveWorkoutScreen from './screens/ActiveWorkoutScreen'
+import CalendarScreen from './screens/CalendarScreen'
+import ExercisesScreen from './screens/ExercisesScreen'
 
 export default function App() {
   const { user, loading } = useAuth()
@@ -14,5 +20,17 @@ export default function App() {
 
   if (!user) return <SignInScreen />
 
-  return <div className="min-h-screen bg-gray-950 text-white">Logged in as {user.displayName}</div>
+  return (
+    <BrowserRouter>
+      <div className="min-h-screen bg-gray-950 text-white pb-20">
+        <Routes>
+          <Route path="/" element={<TodayScreen />} />
+          <Route path="/workout/:date" element={<ActiveWorkoutScreen />} />
+          <Route path="/calendar" element={<CalendarScreen />} />
+          <Route path="/exercises" element={<ExercisesScreen />} />
+        </Routes>
+        <BottomNav />
+      </div>
+    </BrowserRouter>
+  )
 }

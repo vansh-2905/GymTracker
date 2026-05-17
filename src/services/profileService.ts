@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase'
-import { UserProfile, WorkoutType } from '../types'
+import type { UserProfile, WorkoutType } from '../types'
 
 function profileRef(uid: string) {
   return doc(db, 'users', uid, 'data', 'profile')

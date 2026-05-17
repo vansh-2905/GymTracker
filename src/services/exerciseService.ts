@@ -2,7 +2,7 @@ import {
   collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, where
 } from 'firebase/firestore'
 import { db } from '../firebase'
-import { Exercise, WorkoutType } from '../types'
+import type { Exercise, WorkoutType } from '../types'
 
 function exercisesCol(uid: string) {
   return collection(db, 'users', uid, 'exercises')

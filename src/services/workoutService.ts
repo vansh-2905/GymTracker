@@ -3,7 +3,7 @@ import {
   getDocs, query, orderBy, Timestamp
 } from 'firebase/firestore'
 import { db } from '../firebase'
-import { Workout, WorkoutSet, WorkoutType } from '../types'
+import type { Workout, WorkoutSet, WorkoutType } from '../types'
 
 function workoutRef(uid: string, date: string) {
   return doc(db, 'users', uid, 'workouts', date)

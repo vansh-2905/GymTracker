@@ -1,4 +1,4 @@
-import { WorkoutType } from '../types'
+import type { WorkoutType } from '../types'
 
 const SEQUENCE: WorkoutType[] = ['push', 'pull', 'legs']
 
