@@ -14,7 +14,12 @@ const TYPE_COLORS: Record<WorkoutType, string> = {
 }
 
 function todayDate(): string {
-  return new Date().toISOString().split('T')[0]
+  const now = new Date()
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
+function pad(n: number): string {
+  return n.toString().padStart(2, '0')
 }
 
 export default function TodayScreen() {
