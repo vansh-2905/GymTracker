@@ -92,3 +92,44 @@ export async function getWorkoutsInRange(
     })
     .sort((a, b) => a.date.localeCompare(b.date))
 }
+
+// Returns sets for a given exercise from the most recent past workouts (up to 5 workouts back).
+// Results are sorted most-recent-first so callers can easily extract last session and recent weights.
+export async function getRecentExerciseSets(
+  uid: string,
+  exerciseId: string,
+  beforeDate: string,
+): Promise<{ date: string; sets: WorkoutSet[] }[]> {
+  const col = collection(db, 'users', uid, 'workouts')
+  const snap = await getDocs(col)
+  const pastDates = snap.docs
+    .map(d => d.id)
+    .filter(d => d < beforeDate)
+    .sort((a, b) => b.localeCompare(a))
+    .slice(0, 10)
+
+  const results: { date: string; sets: WorkoutSet[] }[] = []
+  for (const date of pastDates) {
+    const q = query(setsCol(uid, date), orderBy('createdAt'))
+    const sSnap = await getDocs(q)
+    const matched = sSnap.docs
+      .map(d => {
+        const data = d.data()
+        return {
+          id: d.id,
+          exerciseId: data['exerciseId'] as string,
+          exerciseName: data['exerciseName'] as string,
+          setNumber: data['setNumber'] as number,
+          reps: data['reps'] as number,
+          weight: data['weight'] as number,
+          activeDuration: data['activeDuration'] as number,
+          restDuration: data['restDuration'] as number,
+          createdAt: (data['createdAt'] as Timestamp).toDate(),
+        } as WorkoutSet
+      })
+      .filter(s => s.exerciseId === exerciseId)
+    if (matched.length > 0) results.push({ date, sets: matched })
+    if (results.length >= 3) break
+  }
+  return results
+}

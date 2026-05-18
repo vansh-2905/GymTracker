@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import type { Exercise, WorkoutSet, WorkoutType } from '../types'
 import { getProfile } from '../services/profileService'
 import { getTemplate } from '../services/templateService'
 import { getExercises } from '../services/exerciseService'
-import { completeWorkout, getWorkout, getSets, logSet } from '../services/workoutService'
+import { completeWorkout, getWorkout, getSets, logSet, getRecentExerciseSets } from '../services/workoutService'
 import { useTimer } from '../hooks/useTimer'
 import TimerDisplay from '../components/TimerDisplay'
 import SetRow from '../components/SetRow'
@@ -14,6 +14,11 @@ const TYPE_COLOR: Record<WorkoutType, string> = {
   push: '#60A5FA',
   pull: '#4ADE80',
   legs: '#FB923C',
+}
+
+interface ExerciseHistory {
+  lastSets: WorkoutSet[]
+  recentWeights: number[]
 }
 
 export default function ActiveWorkoutScreen() {
@@ -32,6 +37,8 @@ export default function ActiveWorkoutScreen() {
   const [showSetModal, setShowSetModal] = useState(false)
   const [pendingActiveDuration, setPendingActiveDuration] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [history, setHistory] = useState<Record<string, ExerciseHistory>>({})
+  const historyCache = useRef<Record<string, ExerciseHistory>>({})
 
   const { setSeconds, restSeconds, phase, startSet, stopSet, resetTimers } = useTimer()
 
@@ -54,11 +61,42 @@ export default function ActiveWorkoutScreen() {
         .filter(Boolean) as Exercise[]
       setExercises(templateExercises)
       setSets(existingSets)
-      if (templateExercises.length > 0) setActiveExercise(templateExercises[0])
+      if (templateExercises.length > 0) {
+        setActiveExercise(templateExercises[0])
+        // Pre-load history for all template exercises in background
+        templateExercises.forEach(ex => loadHistory(ex.id))
+      }
       setLoading(false)
     }
     load()
   }, [uid, date])
+
+  async function loadHistory(exerciseId: string) {
+    if (historyCache.current[exerciseId] || !date) return
+    const sessions = await getRecentExerciseSets(uid, exerciseId, date)
+    const lastSets = sessions[0]?.sets ?? []
+    // Collect recent weights across sessions, deduplicated, most recent first
+    const seen = new Set<number>()
+    const recentWeights: number[] = []
+    for (const session of sessions) {
+      for (const s of [...session.sets].reverse()) {
+        if (!seen.has(s.weight) && recentWeights.length < 3) {
+          seen.add(s.weight)
+          recentWeights.push(s.weight)
+        }
+      }
+      if (recentWeights.length >= 3) break
+    }
+    const entry = { lastSets, recentWeights }
+    historyCache.current[exerciseId] = entry
+    setHistory(prev => ({ ...prev, [exerciseId]: entry }))
+  }
+
+  const handleSelectExercise = (ex: Exercise) => {
+    setActiveExercise(ex)
+    resetTimers()
+    loadHistory(ex.id)
+  }
 
   const handleStopSet = () => {
     const elapsed = stopSet()
@@ -105,6 +143,7 @@ export default function ActiveWorkoutScreen() {
   }
 
   const setsForActive = sets.filter(s => s.exerciseId === activeExercise?.id)
+  const activeHistory = activeExercise ? history[activeExercise.id] : undefined
   const accentColor = TYPE_COLOR[workoutType]
 
   if (loading) {
@@ -117,15 +156,11 @@ export default function ActiveWorkoutScreen() {
 
   return (
     <div className="min-h-screen bg-iron-950 flex flex-col pb-24">
-      {/* Accent line */}
       <div className="h-0.5 w-full" style={{ backgroundColor: accentColor }} />
 
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-8 pb-4">
-        <button
-          onClick={() => navigate('/')}
-          className="font-mono text-iron-400 text-xs uppercase tracking-wider hover:text-white transition-colors"
-        >
+        <button onClick={() => navigate('/')} className="font-mono text-iron-400 text-xs uppercase tracking-wider hover:text-white transition-colors">
           ← Back
         </button>
         <h1 className="font-display text-2xl tracking-wide" style={{ color: accentColor }}>
@@ -145,7 +180,7 @@ export default function ActiveWorkoutScreen() {
         {exercises.map(ex => (
           <button
             key={ex.id}
-            onClick={() => { setActiveExercise(ex); resetTimers() }}
+            onClick={() => handleSelectExercise(ex)}
             className="px-3 py-2 text-xs whitespace-nowrap font-mono uppercase tracking-wider flex-shrink-0 border transition-colors"
             style={
               activeExercise?.id === ex.id
@@ -158,55 +193,55 @@ export default function ActiveWorkoutScreen() {
         ))}
       </div>
 
+      {/* Last session banner */}
+      {activeHistory && activeHistory.lastSets.length > 0 && (
+        <div className="mx-5 mb-3 border border-iron-700 bg-iron-900 px-4 py-3">
+          <p className="font-mono text-[9px] uppercase tracking-widest text-iron-500 mb-1.5">Last session</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            {activeHistory.lastSets.map(s => (
+              <span key={s.id} className="font-mono text-xs text-iron-300">
+                <span className="text-iron-500">#{s.setNumber}</span>{' '}
+                <span className="text-white font-bold">{s.reps}</span>
+                <span className="text-iron-500">reps</span>{' '}
+                <span className="text-acid font-bold">{s.weight}</span>
+                <span className="text-iron-500">{weightUnit}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Timer */}
       <div className="mx-5 mb-4 border border-iron-700 bg-iron-900 p-6 flex flex-col items-center gap-5">
         {phase === 'rest' ? (
           <>
             <TimerDisplay seconds={restSeconds} label="Rest Timer" negative />
-            <p className="font-mono text-iron-500 text-[10px] uppercase tracking-widest">
-              Resting — tap when ready
-            </p>
+            <p className="font-mono text-iron-500 text-[10px] uppercase tracking-widest">Resting — tap when ready</p>
           </>
         ) : (
-          <TimerDisplay
-            seconds={setSeconds}
-            label={phase === 'set' ? 'Set Timer' : 'Ready'}
-            active={phase === 'set'}
-          />
+          <TimerDisplay seconds={setSeconds} label={phase === 'set' ? 'Set Timer' : 'Ready'} active={phase === 'set'} />
         )}
 
         <div className="w-full">
           {phase === 'idle' && (
-            <button
-              onClick={startSet}
-              className="w-full py-4 font-sans font-bold uppercase text-sm text-black transition-opacity active:opacity-80"
-              style={{ backgroundColor: accentColor, letterSpacing: '0.12em' }}
-            >
+            <button onClick={startSet} className="w-full py-4 font-sans font-bold uppercase text-sm text-black" style={{ backgroundColor: accentColor, letterSpacing: '0.12em' }}>
               Start Set
             </button>
           )}
           {phase === 'set' && (
-            <button
-              onClick={handleStopSet}
-              className="w-full py-4 bg-red-500 font-sans font-bold uppercase text-sm text-white transition-opacity active:opacity-80"
-              style={{ letterSpacing: '0.12em' }}
-            >
+            <button onClick={handleStopSet} className="w-full py-4 bg-red-500 font-sans font-bold uppercase text-sm text-white" style={{ letterSpacing: '0.12em' }}>
               Stop Set
             </button>
           )}
           {phase === 'rest' && (
-            <button
-              onClick={handleStartNextSet}
-              className="w-full py-4 font-sans font-bold uppercase text-sm text-black transition-opacity active:opacity-80"
-              style={{ backgroundColor: accentColor, letterSpacing: '0.12em' }}
-            >
+            <button onClick={handleStartNextSet} className="w-full py-4 font-sans font-bold uppercase text-sm text-black" style={{ backgroundColor: accentColor, letterSpacing: '0.12em' }}>
               Next Set
             </button>
           )}
         </div>
       </div>
 
-      {/* Logged sets */}
+      {/* Today's logged sets */}
       {setsForActive.length > 0 && (
         <div className="mx-5 border border-iron-700 bg-iron-900 px-4 pb-2">
           <p className="font-mono text-[10px] uppercase tracking-widest2 pt-3 pb-2" style={{ color: accentColor }}>
@@ -216,7 +251,7 @@ export default function ActiveWorkoutScreen() {
         </div>
       )}
 
-      {/* Set log modal */}
+      {/* Log set modal */}
       {showSetModal && (
         <div className="fixed inset-0 bg-black/85 flex items-end z-50">
           <div className="bg-iron-900 w-full border-t-2" style={{ borderColor: accentColor }}>
@@ -225,6 +260,29 @@ export default function ActiveWorkoutScreen() {
                 <h2 className="font-display text-3xl text-white">LOG SET</h2>
                 <span className="font-mono text-iron-400 text-xs">{pendingActiveDuration}s active</span>
               </div>
+
+              {/* Weight quick-picks */}
+              {activeHistory && activeHistory.recentWeights.length > 0 && (
+                <div className="mb-4">
+                  <p className="font-mono text-[9px] uppercase tracking-widest text-iron-500 mb-2">Recent weights</p>
+                  <div className="flex gap-2">
+                    {activeHistory.recentWeights.map(w => (
+                      <button
+                        key={w}
+                        onClick={() => setPendingWeight(String(w))}
+                        className="flex-1 py-2.5 border font-mono text-sm font-bold transition-colors"
+                        style={
+                          pendingWeight === String(w)
+                            ? { borderColor: accentColor, color: accentColor, backgroundColor: accentColor + '15' }
+                            : { borderColor: '#2C2C2C', color: '#777' }
+                        }
+                      >
+                        {w}<span className="text-xs font-normal text-iron-500 ml-0.5">{weightUnit}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-3 mb-4">
                 <div className="flex-1">
@@ -252,17 +310,10 @@ export default function ActiveWorkoutScreen() {
               </div>
 
               <div className="flex gap-3">
-                <button
-                  onClick={() => { setShowSetModal(false); resetTimers() }}
-                  className="flex-1 py-4 border border-iron-600 font-mono text-xs uppercase tracking-wider text-iron-400 hover:text-white transition-colors"
-                >
+                <button onClick={() => { setShowSetModal(false); resetTimers() }} className="flex-1 py-4 border border-iron-600 font-mono text-xs uppercase tracking-wider text-iron-400">
                   Discard
                 </button>
-                <button
-                  onClick={handleSaveSet}
-                  className="flex-1 py-4 font-sans font-bold uppercase text-sm text-black"
-                  style={{ backgroundColor: accentColor, letterSpacing: '0.12em' }}
-                >
+                <button onClick={handleSaveSet} className="flex-1 py-4 font-sans font-bold uppercase text-sm text-black" style={{ backgroundColor: accentColor, letterSpacing: '0.12em' }}>
                   Save Set
                 </button>
               </div>
