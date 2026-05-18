@@ -7,23 +7,21 @@ import { getProfile, updateLastWorkout } from '../services/profileService'
 import { getProjectedType } from '../utils/ppl'
 import WorkoutSummary from '../components/WorkoutSummary'
 
-const TYPE_DOT: Record<WorkoutType, string> = {
-  push: 'bg-blue-500',
-  pull: 'bg-green-500',
-  legs: 'bg-orange-500',
+const TYPE_COLOR: Record<WorkoutType, string> = {
+  push: '#60A5FA',
+  pull: '#4ADE80',
+  legs: '#FB923C',
 }
-const TYPE_LABELS: Record<WorkoutType, string> = { push: 'Push', pull: 'Pull', legs: 'Legs' }
+const TYPE_LABELS: Record<WorkoutType, string> = { push: 'PUSH', pull: 'PULL', legs: 'LEGS' }
 const TABS: WorkoutType[] = ['push', 'pull', 'legs']
 
-function getDaysInMonth(year: number, month: number): number {
+function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate()
 }
-
-function getFirstDayOfMonth(year: number, month: number): number {
+function getFirstDayOfMonth(year: number, month: number) {
   return new Date(year, month, 1).getDay()
 }
-
-function pad(n: number): string {
+function pad(n: number) {
   return n.toString().padStart(2, '0')
 }
 
@@ -70,7 +68,6 @@ export default function CalendarScreen() {
       setSelectedSets(sets)
       setSelectedWorkout(w)
     } else {
-      // No workout — offer to start one for this date
       const projected = lastType && lastDate ? getProjectedType(lastType, lastDate, dateStr) : 'push'
       setStartModal({ date: dateStr, type: projected as WorkoutType })
     }
@@ -95,25 +92,36 @@ export default function CalendarScreen() {
 
   const daysInMonth = getDaysInMonth(viewYear, viewMonth)
   const firstDay = getFirstDayOfMonth(viewYear, viewMonth)
-  const monthName = new Date(viewYear, viewMonth).toLocaleString('default', { month: 'long', year: 'numeric' })
+  const monthName = new Date(viewYear, viewMonth).toLocaleString('default', { month: 'long' })
 
   return (
-    <div className="p-4 pt-12">
-      <h1 className="text-2xl font-bold mb-4">Calendar</h1>
+    <div className="min-h-screen bg-iron-950 pb-24">
+      <div className="h-0.5 bg-acid w-full" />
 
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={prevMonth} className="text-gray-400 px-3 py-2">‹</button>
-        <span className="font-semibold">{monthName}</span>
-        <button onClick={nextMonth} className="text-gray-400 px-3 py-2">›</button>
+      <div className="px-5 pt-10 pb-4">
+        <h1 className="font-display text-5xl text-white leading-none">LOG</h1>
+        <p className="font-mono text-iron-500 text-[10px] uppercase tracking-widest mt-1">Workout History</p>
       </div>
 
-      <div className="grid grid-cols-7 mb-1">
-        {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
-          <div key={d} className="text-center text-xs text-gray-500 py-1">{d}</div>
+      {/* Month nav */}
+      <div className="flex items-center justify-between px-5 mb-4">
+        <button onClick={prevMonth} className="font-mono text-iron-400 text-sm hover:text-white transition-colors px-2 py-1">‹ PREV</button>
+        <div className="text-center">
+          <p className="font-display text-2xl text-white tracking-wide">{monthName.toUpperCase()}</p>
+          <p className="font-mono text-iron-500 text-[10px]">{viewYear}</p>
+        </div>
+        <button onClick={nextMonth} className="font-mono text-iron-400 text-sm hover:text-white transition-colors px-2 py-1">NEXT ›</button>
+      </div>
+
+      {/* Day headers */}
+      <div className="grid grid-cols-7 px-5 mb-1">
+        {['SU','MO','TU','WE','TH','FR','SA'].map(d => (
+          <div key={d} className="text-center font-mono text-iron-600 text-[9px] py-1">{d}</div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-px px-5">
         {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
         {Array.from({ length: daysInMonth }).map((_, i) => {
           const day = i + 1
@@ -121,6 +129,7 @@ export default function CalendarScreen() {
           const workout = workouts[dateStr]
           const isToday = dateStr === today
           const isFuture = dateStr > today
+          const wColor = workout ? TYPE_COLOR[workout.type] : null
 
           let projected: WorkoutType | null = null
           if (isFuture && lastType && lastDate) {
@@ -132,28 +141,44 @@ export default function CalendarScreen() {
               key={dateStr}
               onClick={() => handleDayPress(dateStr)}
               disabled={isFuture}
-              className={`aspect-square rounded-xl flex flex-col items-center justify-center relative
-                ${isToday ? 'ring-2 ring-indigo-400' : ''}
-                ${workout ? 'bg-gray-800' : isFuture ? 'bg-gray-900 opacity-40' : 'bg-gray-900'}
-              `}
+              className="aspect-square flex flex-col items-center justify-center relative transition-colors"
+              style={{
+                backgroundColor: workout ? wColor + '15' : isToday ? '#E8FF3D08' : 'transparent',
+                outline: isToday ? '1px solid #E8FF3D40' : workout ? `1px solid ${wColor}30` : '1px solid #1A1A1A',
+              }}
             >
-              <span className={`text-sm font-medium ${isToday ? 'text-indigo-300' : 'text-white'}`}>{day}</span>
+              <span
+                className="font-mono text-xs font-bold"
+                style={{ color: isToday ? '#E8FF3D' : isFuture ? '#2A2A2A' : '#AAAAAA' }}
+              >
+                {day}
+              </span>
               {workout && (
-                <span className={`w-2 h-2 rounded-full mt-0.5 ${TYPE_DOT[workout.type]} ${workout.completed ? 'opacity-100' : 'opacity-40'}`} />
+                <span
+                  className="w-1.5 h-1.5 rounded-full mt-0.5"
+                  style={{
+                    backgroundColor: wColor ?? '#fff',
+                    opacity: workout.completed ? 1 : 0.4,
+                  }}
+                />
               )}
               {!workout && isFuture && projected && (
-                <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${TYPE_DOT[projected]} opacity-20`} />
+                <span
+                  className="w-1 h-1 rounded-full mt-0.5"
+                  style={{ backgroundColor: TYPE_COLOR[projected], opacity: 0.15 }}
+                />
               )}
             </button>
           )
         })}
       </div>
 
-      <div className="flex gap-4 mt-4 justify-center">
+      {/* Legend */}
+      <div className="flex gap-5 px-5 mt-4 justify-center">
         {TABS.map(t => (
-          <div key={t} className="flex items-center gap-1.5 text-xs text-gray-400">
-            <span className={`w-2 h-2 rounded-full ${TYPE_DOT[t]}`} />
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+          <div key={t} className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: TYPE_COLOR[t] }} />
+            <span className="font-mono text-iron-500 text-[9px] uppercase tracking-wider">{t}</span>
           </div>
         ))}
       </div>
@@ -171,30 +196,49 @@ export default function CalendarScreen() {
         />
       )}
 
-      {/* Start workout modal for past dates */}
       {startModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-end z-50" onClick={() => setStartModal(null)}>
-          <div className="bg-gray-900 w-full rounded-t-2xl p-6 flex flex-col gap-4" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-bold">Log workout for {startModal.date}</h2>
-            <p className="text-gray-400 text-sm">Select workout type</p>
-            <div className="flex rounded-xl bg-gray-800 p-1">
-              {TABS.map(tab => (
+        <div className="fixed inset-0 bg-black/85 flex items-end z-50" onClick={() => setStartModal(null)}>
+          <div
+            className="bg-iron-900 w-full border-t-2"
+            style={{ borderColor: TYPE_COLOR[startModal.type] }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-5 flex flex-col gap-4">
+              <div>
+                <p className="font-mono text-iron-500 text-[10px] uppercase tracking-widest">{startModal.date}</p>
+                <h2 className="font-display text-3xl text-white mt-1">LOG WORKOUT</h2>
+              </div>
+              <div className="flex border border-iron-700">
+                {TABS.map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setStartModal(m => m ? { ...m, type: tab } : m)}
+                    className="flex-1 py-3 font-mono text-xs uppercase tracking-wider transition-colors"
+                    style={{
+                      backgroundColor: startModal.type === tab ? TYPE_COLOR[tab] + '20' : 'transparent',
+                      color: startModal.type === tab ? TYPE_COLOR[tab] : '#555',
+                      borderRight: tab !== 'legs' ? '1px solid #222' : 'none',
+                    }}
+                  >
+                    {TYPE_LABELS[tab]}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-3">
                 <button
-                  key={tab}
-                  onClick={() => setStartModal(m => m ? { ...m, type: tab } : m)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                    startModal.type === tab ? 'bg-indigo-600 text-white' : 'text-gray-400'
-                  }`}
+                  onClick={() => setStartModal(null)}
+                  className="flex-1 py-4 border border-iron-600 font-mono text-xs uppercase tracking-wider text-iron-400"
                 >
-                  {TYPE_LABELS[tab]}
+                  Cancel
                 </button>
-              ))}
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setStartModal(null)} className="flex-1 py-3 bg-gray-700 rounded-xl">Cancel</button>
-              <button onClick={handleStartPastWorkout} className="flex-1 py-3 bg-indigo-600 rounded-xl font-semibold">
-                Start {TYPE_LABELS[startModal.type]}
-              </button>
+                <button
+                  onClick={handleStartPastWorkout}
+                  className="flex-1 py-4 font-sans font-bold uppercase text-sm text-black"
+                  style={{ backgroundColor: TYPE_COLOR[startModal.type], letterSpacing: '0.12em' }}
+                >
+                  Start {TYPE_LABELS[startModal.type]}
+                </button>
+              </div>
             </div>
           </div>
         </div>

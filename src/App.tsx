@@ -22,7 +22,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-950 text-white pb-20">
+      <div className="min-h-screen bg-iron-950 text-white pb-20">
         <Routes>
           <Route path="/" element={<TodayScreen />} />
           <Route path="/workout/:date" element={<ActiveWorkoutScreen />} />

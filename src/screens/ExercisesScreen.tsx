@@ -6,7 +6,8 @@ import { getTemplate, saveTemplate } from '../services/templateService'
 import ExerciseCard from '../components/ExerciseCard'
 
 const TABS: WorkoutType[] = ['push', 'pull', 'legs']
-const TAB_LABELS: Record<WorkoutType, string> = { push: 'Push', pull: 'Pull', legs: 'Legs' }
+const TAB_LABELS: Record<WorkoutType, string> = { push: 'PUSH', pull: 'PULL', legs: 'LEGS' }
+const TAB_COLOR: Record<WorkoutType, string> = { push: '#60A5FA', pull: '#4ADE80', legs: '#FB923C' }
 
 const EMPTY_FORM = { name: '', category: 'push' as WorkoutType, muscleGroup: '' }
 
@@ -34,6 +35,7 @@ export default function ExercisesScreen() {
 
   const tabExercises = exercises.filter(e => e.category === activeTab)
   const currentTemplate = templates[activeTab]
+  const accentColor = TAB_COLOR[activeTab]
 
   const openAdd = () => {
     setEditTarget(null)
@@ -83,26 +85,49 @@ export default function ExercisesScreen() {
   }
 
   return (
-    <div className="p-4 pt-12">
-      <h1 className="text-2xl font-bold mb-4">Exercises & Templates</h1>
+    <div className="min-h-screen bg-iron-950 pb-24">
+      <div className="h-0.5 w-full" style={{ backgroundColor: accentColor }} />
 
-      <div className="flex rounded-xl bg-gray-800 p-1 mb-4">
+      <div className="px-5 pt-10 pb-4">
+        <h1 className="font-display text-5xl text-white leading-none">LIFTS</h1>
+        <p className="font-mono text-iron-500 text-[10px] uppercase tracking-widest mt-1">
+          Exercises & Templates
+        </p>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex border-b border-iron-700 mx-5 mb-4">
         {TABS.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === tab ? 'bg-indigo-600 text-white' : 'text-gray-400'
-            }`}
+            className="flex-1 py-3 font-mono text-xs uppercase tracking-wider transition-colors relative"
+            style={{ color: activeTab === tab ? TAB_COLOR[tab] : '#555' }}
           >
             {TAB_LABELS[tab]}
+            {activeTab === tab && (
+              <span
+                className="absolute bottom-0 left-0 right-0 h-0.5"
+                style={{ backgroundColor: TAB_COLOR[tab] }}
+              />
+            )}
           </button>
         ))}
       </div>
 
-      <div className="flex flex-col gap-2 mb-4">
+      {/* In-template count */}
+      <div className="px-5 mb-3">
+        <p className="font-mono text-iron-500 text-[10px] uppercase tracking-widest">
+          {currentTemplate.exerciseIds.length} in template · {tabExercises.length} total
+        </p>
+      </div>
+
+      {/* Exercise list */}
+      <div className="flex flex-col gap-px mx-5 mb-5">
         {tabExercises.length === 0 && (
-          <p className="text-gray-500 text-center py-8">No exercises yet. Add one below.</p>
+          <div className="border border-iron-700 p-8 text-center">
+            <p className="font-mono text-iron-500 text-xs uppercase tracking-wider">No exercises yet</p>
+          </div>
         )}
         {tabExercises.map(ex => (
           <ExerciseCard
@@ -116,45 +141,75 @@ export default function ExercisesScreen() {
         ))}
       </div>
 
-      <button
-        onClick={openAdd}
-        className="w-full py-3 bg-indigo-600 rounded-xl font-semibold active:bg-indigo-700"
-      >
-        + Add Exercise
-      </button>
+      <div className="px-5">
+        <button
+          onClick={openAdd}
+          className="w-full py-4 font-sans font-bold uppercase text-sm text-black transition-opacity active:opacity-80"
+          style={{ backgroundColor: accentColor, letterSpacing: '0.12em' }}
+        >
+          + Add Exercise
+        </button>
+      </div>
 
+      {/* Add/Edit modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-end z-50" onClick={() => setShowModal(false)}>
-          <div className="bg-gray-900 w-full rounded-t-2xl p-6 flex flex-col gap-4" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-bold">{editTarget ? 'Edit Exercise' : 'Add Exercise'}</h2>
-            <input
-              className="bg-gray-800 rounded-xl px-4 py-3 text-white placeholder-gray-500 outline-none"
-              placeholder="Exercise name"
-              value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-            />
-            <input
-              className="bg-gray-800 rounded-xl px-4 py-3 text-white placeholder-gray-500 outline-none"
-              placeholder="Muscle group (e.g. Chest)"
-              value={form.muscleGroup}
-              onChange={e => setForm(f => ({ ...f, muscleGroup: e.target.value }))}
-            />
-            <div className="flex rounded-xl bg-gray-800 p-1">
-              {TABS.map(tab => (
+        <div className="fixed inset-0 bg-black/85 flex items-end z-50" onClick={() => setShowModal(false)}>
+          <div
+            className="bg-iron-900 w-full border-t-2"
+            style={{ borderColor: TAB_COLOR[form.category] }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-5 flex flex-col gap-4">
+              <h2 className="font-display text-3xl text-white">
+                {editTarget ? 'EDIT LIFT' : 'NEW LIFT'}
+              </h2>
+
+              <input
+                className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white font-sans outline-none focus:border-acid transition-colors placeholder-iron-500"
+                placeholder="Exercise name"
+                value={form.name}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              />
+              <input
+                className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white font-sans outline-none focus:border-acid transition-colors placeholder-iron-500"
+                placeholder="Muscle group (e.g. Chest)"
+                value={form.muscleGroup}
+                onChange={e => setForm(f => ({ ...f, muscleGroup: e.target.value }))}
+              />
+
+              {/* Category selector */}
+              <div className="flex border border-iron-700">
+                {TABS.map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setForm(f => ({ ...f, category: tab }))}
+                    className="flex-1 py-3 font-mono text-xs uppercase tracking-wider transition-colors"
+                    style={{
+                      backgroundColor: form.category === tab ? TAB_COLOR[tab] + '20' : 'transparent',
+                      color: form.category === tab ? TAB_COLOR[tab] : '#555',
+                      borderRight: tab !== 'legs' ? '1px solid #222' : 'none',
+                    }}
+                  >
+                    {TAB_LABELS[tab]}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
                 <button
-                  key={tab}
-                  onClick={() => setForm(f => ({ ...f, category: tab }))}
-                  className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                    form.category === tab ? 'bg-indigo-600 text-white' : 'text-gray-400'
-                  }`}
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 py-4 border border-iron-600 font-mono text-xs uppercase tracking-wider text-iron-400"
                 >
-                  {TAB_LABELS[tab]}
+                  Cancel
                 </button>
-              ))}
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setShowModal(false)} className="flex-1 py-3 bg-gray-700 rounded-xl">Cancel</button>
-              <button onClick={handleSave} className="flex-1 py-3 bg-indigo-600 rounded-xl font-semibold">Save</button>
+                <button
+                  onClick={handleSave}
+                  className="flex-1 py-4 font-sans font-bold uppercase text-sm text-black"
+                  style={{ backgroundColor: TAB_COLOR[form.category], letterSpacing: '0.12em' }}
+                >
+                  Save
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -10,6 +10,12 @@ import { useTimer } from '../hooks/useTimer'
 import TimerDisplay from '../components/TimerDisplay'
 import SetRow from '../components/SetRow'
 
+const TYPE_COLOR: Record<WorkoutType, string> = {
+  push: '#60A5FA',
+  pull: '#4ADE80',
+  legs: '#FB923C',
+}
+
 export default function ActiveWorkoutScreen() {
   const { date } = useParams<{ date: string }>()
   const { user } = useAuth()
@@ -99,52 +105,82 @@ export default function ActiveWorkoutScreen() {
   }
 
   const setsForActive = sets.filter(s => s.exerciseId === activeExercise?.id)
+  const accentColor = TYPE_COLOR[workoutType]
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-iron-950">
+        <div className="w-8 h-8 border-2 border-acid border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="p-4 pt-10 flex flex-col min-h-screen">
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={() => navigate('/')} className="text-gray-400">← Back</button>
-        <h1 className="font-bold text-lg capitalize">{workoutType} Day</h1>
-        <button onClick={handleFinish} className="text-green-400 text-sm font-semibold">Finish</button>
+    <div className="min-h-screen bg-iron-950 flex flex-col pb-24">
+      {/* Accent line */}
+      <div className="h-0.5 w-full" style={{ backgroundColor: accentColor }} />
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 pt-8 pb-4">
+        <button
+          onClick={() => navigate('/')}
+          className="font-mono text-iron-400 text-xs uppercase tracking-wider hover:text-white transition-colors"
+        >
+          ← Back
+        </button>
+        <h1 className="font-display text-2xl tracking-wide" style={{ color: accentColor }}>
+          {workoutType.toUpperCase()} DAY
+        </h1>
+        <button
+          onClick={handleFinish}
+          className="font-mono text-xs uppercase tracking-wider px-3 py-1.5 border transition-colors"
+          style={{ borderColor: accentColor, color: accentColor }}
+        >
+          DONE
+        </button>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+      {/* Exercise selector */}
+      <div className="flex gap-2 overflow-x-auto px-5 pb-3 scrollbar-none">
         {exercises.map(ex => (
           <button
             key={ex.id}
             onClick={() => { setActiveExercise(ex); resetTimers() }}
-            className={`px-3 py-2 rounded-xl text-sm whitespace-nowrap font-medium flex-shrink-0 ${
-              activeExercise?.id === ex.id ? 'bg-indigo-600' : 'bg-gray-800'
-            }`}
+            className="px-3 py-2 text-xs whitespace-nowrap font-mono uppercase tracking-wider flex-shrink-0 border transition-colors"
+            style={
+              activeExercise?.id === ex.id
+                ? { borderColor: accentColor, color: accentColor, backgroundColor: accentColor + '15' }
+                : { borderColor: '#2C2C2C', color: '#555' }
+            }
           >
             {ex.name}
           </button>
         ))}
       </div>
 
-      <div className="bg-gray-800 rounded-2xl p-6 mb-4 flex flex-col items-center gap-4">
+      {/* Timer */}
+      <div className="mx-5 mb-4 border border-iron-700 bg-iron-900 p-6 flex flex-col items-center gap-5">
         {phase === 'rest' ? (
           <>
-            <TimerDisplay seconds={restSeconds} label="Rest" negative />
-            <p className="text-gray-400 text-sm">Resting… tap when ready for next set</p>
+            <TimerDisplay seconds={restSeconds} label="Rest Timer" negative />
+            <p className="font-mono text-iron-500 text-[10px] uppercase tracking-widest">
+              Resting — tap when ready
+            </p>
           </>
         ) : (
-          <TimerDisplay seconds={setSeconds} label={phase === 'set' ? 'Set in progress' : 'Ready'} />
+          <TimerDisplay
+            seconds={setSeconds}
+            label={phase === 'set' ? 'Set Timer' : 'Ready'}
+            active={phase === 'set'}
+          />
         )}
 
-        <div className="flex gap-3 w-full">
+        <div className="w-full">
           {phase === 'idle' && (
             <button
               onClick={startSet}
-              className="flex-1 py-3 bg-indigo-600 rounded-xl font-bold active:bg-indigo-700"
+              className="w-full py-4 font-sans font-bold uppercase text-sm text-black transition-opacity active:opacity-80"
+              style={{ backgroundColor: accentColor, letterSpacing: '0.12em' }}
             >
               Start Set
             </button>
@@ -152,7 +188,8 @@ export default function ActiveWorkoutScreen() {
           {phase === 'set' && (
             <button
               onClick={handleStopSet}
-              className="flex-1 py-3 bg-red-600 rounded-xl font-bold active:bg-red-700"
+              className="w-full py-4 bg-red-500 font-sans font-bold uppercase text-sm text-white transition-opacity active:opacity-80"
+              style={{ letterSpacing: '0.12em' }}
             >
               Stop Set
             </button>
@@ -160,53 +197,75 @@ export default function ActiveWorkoutScreen() {
           {phase === 'rest' && (
             <button
               onClick={handleStartNextSet}
-              className="flex-1 py-3 bg-indigo-600 rounded-xl font-bold active:bg-indigo-700"
+              className="w-full py-4 font-sans font-bold uppercase text-sm text-black transition-opacity active:opacity-80"
+              style={{ backgroundColor: accentColor, letterSpacing: '0.12em' }}
             >
-              Start Next Set
+              Next Set
             </button>
           )}
         </div>
       </div>
 
+      {/* Logged sets */}
       {setsForActive.length > 0 && (
-        <div className="bg-gray-800 rounded-2xl p-4 mb-4">
-          <p className="text-sm text-gray-400 mb-2 font-medium">{activeExercise?.name} — Sets logged</p>
+        <div className="mx-5 border border-iron-700 bg-iron-900 px-4 pb-2">
+          <p className="font-mono text-[10px] uppercase tracking-widest2 pt-3 pb-2" style={{ color: accentColor }}>
+            {activeExercise?.name}
+          </p>
           {setsForActive.map(s => <SetRow key={s.id} set={s} unit={weightUnit} />)}
         </div>
       )}
 
+      {/* Set log modal */}
       {showSetModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-end z-50">
-          <div className="bg-gray-900 w-full rounded-t-2xl p-6 flex flex-col gap-4">
-            <h2 className="text-lg font-bold">Log Set</h2>
-            <p className="text-gray-400 text-sm">Set time: {pendingActiveDuration}s</p>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="text-xs text-gray-400 mb-1 block">Reps</label>
-                <input
-                  type="number"
-                  className="w-full bg-gray-800 rounded-xl px-4 py-3 text-white text-center text-xl outline-none"
-                  placeholder="12"
-                  value={pendingReps}
-                  onChange={e => setPendingReps(e.target.value)}
-                  inputMode="numeric"
-                />
+        <div className="fixed inset-0 bg-black/85 flex items-end z-50">
+          <div className="bg-iron-900 w-full border-t-2" style={{ borderColor: accentColor }}>
+            <div className="p-5">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-display text-3xl text-white">LOG SET</h2>
+                <span className="font-mono text-iron-400 text-xs">{pendingActiveDuration}s active</span>
               </div>
-              <div className="flex-1">
-                <label className="text-xs text-gray-400 mb-1 block">Weight ({weightUnit})</label>
-                <input
-                  type="number"
-                  className="w-full bg-gray-800 rounded-xl px-4 py-3 text-white text-center text-xl outline-none"
-                  placeholder="60"
-                  value={pendingWeight}
-                  onChange={e => setPendingWeight(e.target.value)}
-                  inputMode="decimal"
-                />
+
+              <div className="flex gap-3 mb-4">
+                <div className="flex-1">
+                  <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Reps</label>
+                  <input
+                    type="number"
+                    className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                    placeholder="12"
+                    value={pendingReps}
+                    onChange={e => setPendingReps(e.target.value)}
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Weight ({weightUnit})</label>
+                  <input
+                    type="number"
+                    className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                    placeholder="60"
+                    value={pendingWeight}
+                    onChange={e => setPendingWeight(e.target.value)}
+                    inputMode="decimal"
+                  />
+                </div>
               </div>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => { setShowSetModal(false); resetTimers() }} className="flex-1 py-3 bg-gray-700 rounded-xl">Discard</button>
-              <button onClick={handleSaveSet} className="flex-1 py-3 bg-indigo-600 rounded-xl font-bold">Save Set</button>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowSetModal(false); resetTimers() }}
+                  className="flex-1 py-4 border border-iron-600 font-mono text-xs uppercase tracking-wider text-iron-400 hover:text-white transition-colors"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={handleSaveSet}
+                  className="flex-1 py-4 font-sans font-bold uppercase text-sm text-black"
+                  style={{ backgroundColor: accentColor, letterSpacing: '0.12em' }}
+                >
+                  Save Set
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -13,12 +13,11 @@ function fmtTime(secs: number): string {
 
 export default function SetRow({ set, unit }: Props) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-gray-700 last:border-0">
-      <span className="text-gray-400 text-sm w-6">#{set.setNumber}</span>
-      <span className="font-semibold">{set.reps} reps</span>
-      <span className="font-semibold">{set.weight}{unit}</span>
-      <span className="text-gray-400 text-xs">{fmtTime(set.activeDuration)} active</span>
-      <span className="text-gray-400 text-xs">{fmtTime(set.restDuration)} rest</span>
+    <div className="flex items-center gap-3 py-2.5 border-b border-iron-700 last:border-0">
+      <span className="font-mono text-iron-400 text-xs w-5 flex-shrink-0">#{set.setNumber}</span>
+      <span className="font-mono font-bold text-white text-base flex-1">{set.reps}<span className="text-iron-400 text-xs ml-0.5">reps</span></span>
+      <span className="font-mono font-bold text-acid text-base">{set.weight}<span className="text-iron-400 text-xs ml-0.5">{unit}</span></span>
+      <span className="font-mono text-iron-400 text-xs">{fmtTime(set.activeDuration)}</span>
     </div>
   )
 }

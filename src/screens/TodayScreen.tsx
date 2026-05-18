@@ -6,11 +6,11 @@ import { getProfile, initProfile, updateLastWorkout } from '../services/profileS
 import { getWorkout, startWorkout } from '../services/workoutService'
 import { nextWorkoutType } from '../utils/ppl'
 
-const TYPE_LABELS: Record<WorkoutType, string> = { push: 'Push', pull: 'Pull', legs: 'Legs' }
-const TYPE_COLORS: Record<WorkoutType, string> = {
-  push: 'bg-blue-600',
-  pull: 'bg-green-600',
-  legs: 'bg-orange-600',
+const TYPE_LABELS: Record<WorkoutType, string> = { push: 'PUSH', pull: 'PULL', legs: 'LEGS' }
+const TYPE_COLOR: Record<WorkoutType, string> = {
+  push: '#60A5FA',
+  pull: '#4ADE80',
+  legs: '#FB923C',
 }
 
 function todayDate(): string {
@@ -51,6 +51,7 @@ export default function TodayScreen() {
   }, [uid, date])
 
   const selectedType = overrideType ?? dueType
+  const color = TYPE_COLOR[selectedType]
 
   const handleStart = async () => {
     await startWorkout(uid, date, selectedType)
@@ -60,63 +61,92 @@ export default function TodayScreen() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-iron-950">
+        <div className="w-8 h-8 border-2 border-acid border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="p-6 pt-12">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-2xl font-bold">Today</h1>
-          <p className="text-gray-400 text-sm">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+    <div className="min-h-screen bg-iron-950 flex flex-col">
+      {/* Accent top bar */}
+      <div className="h-0.5 w-full" style={{ backgroundColor: color }} />
+
+      <div className="flex-1 flex flex-col p-5 pt-10">
+        {/* Header */}
+        <div className="flex justify-between items-start mb-10">
+          <div>
+            <p className="font-mono text-iron-400 text-[10px] tracking-widest2 uppercase">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+            </p>
+            <h1 className="font-display text-5xl text-white leading-none mt-1">TODAY</h1>
+          </div>
+          <button
+            onClick={signOut}
+            className="font-mono text-iron-500 text-[10px] uppercase tracking-wider hover:text-iron-300 transition-colors mt-1"
+          >
+            Sign out
+          </button>
         </div>
-        <button onClick={signOut} className="text-gray-400 text-sm">Sign out</button>
-      </div>
 
-      <div className="bg-gray-800 rounded-2xl p-6 mb-6 text-center">
-        <p className="text-gray-400 text-sm mb-2">Due today</p>
-        <span className={`inline-block px-6 py-2 rounded-full text-white font-bold text-xl ${TYPE_COLORS[selectedType]}`}>
-          {TYPE_LABELS[selectedType]}
-        </span>
-      </div>
-
-      <div className="mb-6">
-        <p className="text-gray-400 text-sm mb-2">Override workout type</p>
-        <div className="flex rounded-xl bg-gray-800 p-1">
-          {(['push', 'pull', 'legs'] as WorkoutType[]).map(type => (
-            <button
-              key={type}
-              onClick={() => setOverrideType(type === dueType && overrideType === type ? null : type)}
-              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                selectedType === type ? 'bg-indigo-600 text-white' : 'text-gray-400'
-              }`}
-            >
-              {TYPE_LABELS[type]}
-            </button>
-          ))}
+        {/* Due workout — big display */}
+        <div className="flex-1 flex flex-col items-center justify-center mb-10">
+          <p className="font-mono text-iron-500 text-[10px] tracking-widest2 uppercase mb-4">Due today</p>
+          <div
+            className="font-display leading-none text-center"
+            style={{ fontSize: 'clamp(5rem, 28vw, 9rem)', color }}
+          >
+            {TYPE_LABELS[selectedType]}
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <div className="h-px w-8 bg-iron-700" />
+            <p className="font-mono text-iron-500 text-[10px] tracking-widest uppercase">
+              {profile?.weightUnit ?? 'kg'} · {user?.displayName?.split(' ')[0]}
+            </p>
+            <div className="h-px w-8 bg-iron-700" />
+          </div>
         </div>
+
+        {/* Type override */}
+        <div className="mb-4">
+          <p className="font-mono text-iron-500 text-[10px] tracking-widest2 uppercase mb-2">Override</p>
+          <div className="flex border border-iron-700">
+            {(['push', 'pull', 'legs'] as WorkoutType[]).map(type => (
+              <button
+                key={type}
+                onClick={() => setOverrideType(type === dueType && overrideType === type ? null : type)}
+                className="flex-1 py-3 font-mono text-xs uppercase tracking-wider transition-colors"
+                style={{
+                  backgroundColor: selectedType === type ? TYPE_COLOR[type] + '22' : 'transparent',
+                  color: selectedType === type ? TYPE_COLOR[type] : '#555',
+                  borderRight: type !== 'legs' ? '1px solid #222' : 'none',
+                }}
+              >
+                {TYPE_LABELS[type]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* CTA */}
+        {todayWorkout?.exists ? (
+          <button
+            onClick={() => navigate(`/workout/${date}`)}
+            className="w-full py-5 font-sans font-bold uppercase text-sm text-black transition-opacity active:opacity-80"
+            style={{ backgroundColor: color, letterSpacing: '0.12em' }}
+          >
+            {todayWorkout.completed ? "View Today's Workout" : 'Continue Workout'}
+          </button>
+        ) : (
+          <button
+            onClick={handleStart}
+            className="w-full py-5 font-sans font-bold uppercase text-sm text-black transition-opacity active:opacity-80"
+            style={{ backgroundColor: color, letterSpacing: '0.12em' }}
+          >
+            Start {TYPE_LABELS[selectedType]} Workout
+          </button>
+        )}
       </div>
-
-      {todayWorkout?.exists ? (
-        <button
-          onClick={() => navigate(`/workout/${date}`)}
-          className="w-full py-4 bg-indigo-600 rounded-2xl font-bold text-lg active:bg-indigo-700"
-        >
-          {todayWorkout.completed ? "View Today's Workout" : 'Continue Workout'}
-        </button>
-      ) : (
-        <button
-          onClick={handleStart}
-          className="w-full py-4 bg-indigo-600 rounded-2xl font-bold text-lg active:bg-indigo-700"
-        >
-          Start {TYPE_LABELS[selectedType]} Workout
-        </button>
-      )}
-
-      <p className="text-gray-600 text-xs text-center mt-4">{profile?.weightUnit ?? 'kg'} · {user?.displayName}</p>
     </div>
   )
 }
