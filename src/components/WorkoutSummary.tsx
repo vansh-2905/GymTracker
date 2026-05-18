@@ -5,6 +5,7 @@ interface Props {
   sets: WorkoutSet[]
   weightUnit: string
   onClose: () => void
+  onEdit?: () => void
 }
 
 function groupByExercise(sets: WorkoutSet[]): Record<string, WorkoutSet[]> {
@@ -15,7 +16,7 @@ function groupByExercise(sets: WorkoutSet[]): Record<string, WorkoutSet[]> {
   }, {} as Record<string, WorkoutSet[]>)
 }
 
-export default function WorkoutSummary({ workout, sets, weightUnit, onClose }: Props) {
+export default function WorkoutSummary({ workout, sets, weightUnit, onClose, onEdit }: Props) {
   const grouped = groupByExercise(sets)
   return (
     <div className="fixed inset-0 bg-black/70 flex items-end z-50" onClick={onClose}>
@@ -37,6 +38,14 @@ export default function WorkoutSummary({ workout, sets, weightUnit, onClose }: P
           </div>
         ))}
         {sets.length === 0 && <p className="text-gray-400">No sets recorded.</p>}
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            className="w-full mt-4 py-3 bg-indigo-600 rounded-xl font-semibold active:bg-indigo-700"
+          >
+            Edit Workout
+          </button>
+        )}
       </div>
     </div>
   )
