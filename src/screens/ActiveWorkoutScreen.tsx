@@ -5,7 +5,7 @@ import type { Exercise, WorkoutSet, WorkoutType } from '../types'
 import { getProfile } from '../services/profileService'
 import { getTemplate } from '../services/templateService'
 import { getExercises } from '../services/exerciseService'
-import { completeWorkout, getWorkout, getSets, logSet, getRecentExerciseSets } from '../services/workoutService'
+import { completeWorkout, getWorkout, getSets, logSet, updateSet, deleteSet, getRecentExerciseSets } from '../services/workoutService'
 import { useTimer } from '../hooks/useTimer'
 import TimerDisplay from '../components/TimerDisplay'
 import SetRow from '../components/SetRow'
@@ -39,6 +39,10 @@ export default function ActiveWorkoutScreen() {
   const [loading, setLoading] = useState(true)
   const [history, setHistory] = useState<Record<string, ExerciseHistory>>({})
   const historyCache = useRef<Record<string, ExerciseHistory>>({})
+  const [editingSet, setEditingSet] = useState<WorkoutSet | null>(null)
+  const [editReps, setEditReps] = useState('')
+  const [editWeight, setEditWeight] = useState('')
+  const [confirmDeleteSet, setConfirmDeleteSet] = useState<WorkoutSet | null>(null)
 
   const { setSeconds, restSeconds, phase, startSet, stopSet, resetTimers } = useTimer()
 
@@ -134,6 +138,29 @@ export default function ActiveWorkoutScreen() {
     setShowSetModal(false)
     resetTimers()
     startSet()
+  }
+
+  const handleEditSet = (set: WorkoutSet) => {
+    setEditingSet(set)
+    setEditReps(String(set.reps))
+    setEditWeight(String(set.weight))
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingSet || !date) return
+    const reps = parseInt(editReps)
+    const weight = parseFloat(editWeight)
+    if (isNaN(reps) || isNaN(weight)) return
+    await updateSet(uid, date, editingSet.id, { reps, weight })
+    setSets(prev => prev.map(s => s.id === editingSet.id ? { ...s, reps, weight } : s))
+    setEditingSet(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteSet || !date) return
+    await deleteSet(uid, date, confirmDeleteSet.id)
+    setSets(prev => prev.filter(s => s.id !== confirmDeleteSet.id))
+    setConfirmDeleteSet(null)
   }
 
   const handleFinish = async () => {
@@ -247,7 +274,82 @@ export default function ActiveWorkoutScreen() {
           <p className="font-mono text-[10px] uppercase tracking-widest2 pt-3 pb-2" style={{ color: accentColor }}>
             {activeExercise?.name}
           </p>
-          {setsForActive.map(s => <SetRow key={s.id} set={s} unit={weightUnit} />)}
+          {setsForActive.map(s => (
+            <SetRow
+              key={s.id}
+              set={s}
+              unit={weightUnit}
+              onEdit={handleEditSet}
+              onDelete={setConfirmDeleteSet}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Edit set modal */}
+      {editingSet && (
+        <div className="fixed inset-0 bg-black/85 flex items-end z-50">
+          <div className="bg-iron-900 w-full border-t-2" style={{ borderColor: accentColor }}>
+            <div className="p-5">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-display text-3xl text-white">EDIT SET</h2>
+                <span className="font-mono text-iron-400 text-xs">#{editingSet.setNumber}</span>
+              </div>
+              <div className="flex gap-3 mb-4">
+                <div className="flex-1">
+                  <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Reps</label>
+                  <input
+                    type="number"
+                    className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                    value={editReps}
+                    onChange={e => setEditReps(e.target.value)}
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Weight ({weightUnit})</label>
+                  <input
+                    type="number"
+                    className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                    value={editWeight}
+                    onChange={e => setEditWeight(e.target.value)}
+                    inputMode="decimal"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setEditingSet(null)} className="flex-1 py-4 border border-iron-600 font-mono text-xs uppercase tracking-wider text-iron-400">
+                  Cancel
+                </button>
+                <button onClick={handleSaveEdit} className="flex-1 py-4 font-sans font-bold uppercase text-sm text-black" style={{ backgroundColor: accentColor, letterSpacing: '0.12em' }}>
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm delete modal */}
+      {confirmDeleteSet && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 px-5">
+          <div className="bg-iron-900 w-full border border-red-600">
+            <div className="p-5">
+              <h2 className="font-display text-3xl text-white mb-1">DELETE SET</h2>
+              <p className="font-mono text-iron-400 text-xs mb-4">
+                Set #{confirmDeleteSet.setNumber} · {confirmDeleteSet.reps} reps · {confirmDeleteSet.weight}{weightUnit}
+              </p>
+              <p className="font-sans text-iron-300 text-sm mb-5">This cannot be undone.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmDeleteSet(null)} className="flex-1 py-4 border border-iron-600 font-mono text-xs uppercase tracking-wider text-iron-400">
+                  Keep It
+                </button>
+                <button onClick={handleConfirmDelete} className="flex-1 py-4 bg-red-600 font-sans font-bold uppercase text-sm text-white" style={{ letterSpacing: '0.12em' }}>
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

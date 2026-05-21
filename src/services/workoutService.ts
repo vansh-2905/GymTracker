@@ -1,5 +1,5 @@
 import {
-  doc, getDoc, setDoc, updateDoc, collection, addDoc,
+  doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc,
   getDocs, query, orderBy, Timestamp
 } from 'firebase/firestore'
 import { db } from '../firebase'
@@ -95,6 +95,19 @@ export async function getWorkoutsInRange(
 
 // Returns sets for a given exercise from the most recent past workouts (up to 5 workouts back).
 // Results are sorted most-recent-first so callers can easily extract last session and recent weights.
+export async function updateSet(
+  uid: string,
+  date: string,
+  setId: string,
+  updates: { reps: number; weight: number },
+): Promise<void> {
+  await updateDoc(doc(setsCol(uid, date), setId), updates)
+}
+
+export async function deleteSet(uid: string, date: string, setId: string): Promise<void> {
+  await deleteDoc(doc(setsCol(uid, date), setId))
+}
+
 export async function getRecentExerciseSets(
   uid: string,
   exerciseId: string,
