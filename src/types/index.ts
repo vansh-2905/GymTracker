@@ -1,10 +1,26 @@
 export type WorkoutType = 'push' | 'pull' | 'legs'
 export type WeightUnit = 'kg' | 'lbs'
+export type BiologicalSex = 'male' | 'female'
+export type FitnessLevel = 'beginner' | 'intermediate' | 'active' | 'advanced' | 'athlete'
+export type PrimaryGoal = 'weight_loss' | 'muscle_gain' | 'maintenance' | 'endurance' | 'general_health'
 
 export interface UserProfile {
   lastWorkoutType: WorkoutType | null
-  lastWorkoutDate: string | null  // YYYY-MM-DD
+  lastWorkoutDate: string | null
   weightUnit: WeightUnit
+}
+
+export interface FitnessProfile {
+  biologicalSex: BiologicalSex
+  age: number
+  heightCm: number
+  bodyWeightKg: number
+  fitnessLevel: FitnessLevel
+  primaryGoal: PrimaryGoal
+  bodyFatPct: string | null
+  userMetFactor: number
+  skipped: boolean
+  completedAt: string
 }
 
 export interface Exercise {
@@ -16,7 +32,7 @@ export interface Exercise {
 
 export interface Template {
   type: WorkoutType
-  exerciseIds: string[]  // ordered
+  exerciseIds: string[]
 }
 
 export interface WorkoutSet {
@@ -26,13 +42,14 @@ export interface WorkoutSet {
   setNumber: number
   reps: number
   weight: number
-  activeDuration: number   // seconds
-  restDuration: number     // seconds (can exceed 90)
+  activeDuration: number
+  restDuration: number
+  kcal?: number
   createdAt: Date
 }
 
 export interface Workout {
-  date: string             // YYYY-MM-DD, also the doc ID
+  date: string
   type: WorkoutType
   startTime: Date
   endTime: Date | null
