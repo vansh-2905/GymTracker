@@ -91,27 +91,31 @@ export default function OnboardingScreen({ onComplete }: Props) {
 
   async function handleFinish(skipped: boolean) {
     setSaving(true)
-    const sex = skipped ? DEFAULTS.biologicalSex : (biologicalSex ?? DEFAULTS.biologicalSex)
-    const ageVal = skipped ? DEFAULTS.age : (parseInt(age) || DEFAULTS.age)
-    const hCm = skipped ? DEFAULTS.heightCm : resolvedHeightCm()
-    const wKg = skipped ? DEFAULTS.bodyWeightKg : resolvedWeightKg()
-    const level = skipped ? DEFAULTS.fitnessLevel : (fitnessLevel ?? DEFAULTS.fitnessLevel)
-    const goal = skipped ? DEFAULTS.primaryGoal : (primaryGoal ?? DEFAULTS.primaryGoal)
-    const userMetFactor = computeUserMetFactor(sex, ageVal, level)
+    try {
+      const sex = skipped ? DEFAULTS.biologicalSex : (biologicalSex ?? DEFAULTS.biologicalSex)
+      const ageVal = skipped ? DEFAULTS.age : (parseInt(age) || DEFAULTS.age)
+      const hCm = skipped ? DEFAULTS.heightCm : resolvedHeightCm()
+      const wKg = skipped ? DEFAULTS.bodyWeightKg : resolvedWeightKg()
+      const level = skipped ? DEFAULTS.fitnessLevel : (fitnessLevel ?? DEFAULTS.fitnessLevel)
+      const goal = skipped ? DEFAULTS.primaryGoal : (primaryGoal ?? DEFAULTS.primaryGoal)
+      const userMetFactor = computeUserMetFactor(sex, ageVal, level)
 
-    await saveFitnessProfile(user!.uid, {
-      biologicalSex: sex,
-      age: ageVal,
-      heightCm: hCm,
-      bodyWeightKg: wKg,
-      fitnessLevel: level,
-      primaryGoal: goal,
-      bodyFatPct: skipped ? null : bodyFatPct,
-      userMetFactor,
-      skipped,
-      completedAt: todayStr(),
-    })
-    onComplete()
+      await saveFitnessProfile(user!.uid, {
+        biologicalSex: sex,
+        age: ageVal,
+        heightCm: hCm,
+        bodyWeightKg: wKg,
+        fitnessLevel: level,
+        primaryGoal: goal,
+        bodyFatPct: skipped ? null : bodyFatPct,
+        userMetFactor,
+        skipped,
+        completedAt: todayStr(),
+      })
+      onComplete()
+    } finally {
+      setSaving(false)
+    }
   }
 
   const optionCls = (selected: boolean) =>
