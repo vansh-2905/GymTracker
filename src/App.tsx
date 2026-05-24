@@ -6,9 +6,10 @@ import TodayScreen from './screens/TodayScreen'
 import ActiveWorkoutScreen from './screens/ActiveWorkoutScreen'
 import CalendarScreen from './screens/CalendarScreen'
 import ExercisesScreen from './screens/ExercisesScreen'
+import OnboardingScreen from './screens/OnboardingScreen'
 
 export default function App() {
-  const { user, loading } = useAuth()
+  const { user, loading, needsOnboarding, completeOnboarding } = useAuth()
 
   if (loading) {
     return (
@@ -19,6 +20,7 @@ export default function App() {
   }
 
   if (!user) return <SignInScreen />
+  if (needsOnboarding) return <OnboardingScreen onComplete={completeOnboarding} />
 
   return (
     <BrowserRouter>
