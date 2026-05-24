@@ -33,3 +33,7 @@ export async function updateLastWorkout(
 export async function updateWeightUnit(uid: string, unit: 'kg' | 'lbs'): Promise<void> {
   await updateDoc(profileRef(uid), { weightUnit: unit })
 }
+
+export async function updateRestDefault(uid: string, seconds: number): Promise<void> {
+  await updateDoc(profileRef(uid), { restDefaultSeconds: seconds })
+}

@@ -8,6 +8,7 @@ export interface UserProfile {
   lastWorkoutType: WorkoutType | null
   lastWorkoutDate: string | null
   weightUnit: WeightUnit
+  restDefaultSeconds?: number
 }
 
 export interface FitnessProfile {
