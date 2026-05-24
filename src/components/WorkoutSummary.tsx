@@ -25,6 +25,8 @@ function groupByExercise(sets: WorkoutSet[]): Record<string, WorkoutSet[]> {
 export default function WorkoutSummary({ workout, sets, weightUnit, onClose, onEdit }: Props) {
   const grouped = groupByExercise(sets)
   const color = TYPE_COLOR[workout.type] ?? '#E8FF3D'
+  const totalKcal = sets.reduce((sum, s) => sum + (s.kcal ?? 0), 0)
+  const hasKcal = sets.some(s => s.kcal !== undefined)
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-end z-50" onClick={onClose}>
@@ -42,6 +44,11 @@ export default function WorkoutSummary({ workout, sets, weightUnit, onClose, onE
             >
               {workout.type.toUpperCase()} DAY
             </h2>
+            {hasKcal && (
+              <p className="font-mono text-[10px] tracking-widest mt-1" style={{ color }}>
+                {Math.round(totalKcal)} KCAL BURNED
+              </p>
+            )}
           </div>
           <button onClick={onClose} className="text-iron-400 font-mono text-xs hover:text-white transition-colors p-2">
             ✕ CLOSE
