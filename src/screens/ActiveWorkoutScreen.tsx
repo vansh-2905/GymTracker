@@ -1,11 +1,13 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import type { Exercise, WorkoutSet, WorkoutType } from '../types'
+import type { Exercise, WorkoutSet, WorkoutType, FitnessProfile } from '../types'
 import { getProfile } from '../services/profileService'
 import { getTemplate } from '../services/templateService'
 import { getExercises } from '../services/exerciseService'
 import { completeWorkout, getWorkout, getSets, logSet, updateSet, deleteSet, getRecentExerciseSets } from '../services/workoutService'
+import { getFitnessProfile } from '../services/fitnessProfileService'
+import { calculateSetKcal } from '../utils/calorieCalc'
 import { useTimer } from '../hooks/useTimer'
 import TimerDisplay from '../components/TimerDisplay'
 import SetRow from '../components/SetRow'
@@ -43,17 +45,20 @@ export default function ActiveWorkoutScreen() {
   const [editReps, setEditReps] = useState('')
   const [editWeight, setEditWeight] = useState('')
   const [confirmDeleteSet, setConfirmDeleteSet] = useState<WorkoutSet | null>(null)
+  const [fitnessProfile, setFitnessProfile] = useState<FitnessProfile | null>(null)
 
   const { setSeconds, restSeconds, phase, startSet, stopSet, resetTimers } = useTimer()
 
   useEffect(() => {
     if (!date) return
     async function load() {
-      const [profile, existingWorkout, existingSets] = await Promise.all([
+      const [profile, existingWorkout, existingSets, fp] = await Promise.all([
         getProfile(uid),
         getWorkout(uid, date!),
         getSets(uid, date!),
+        getFitnessProfile(uid),
       ])
+      setFitnessProfile(fp)
       const unit = profile?.weightUnit ?? 'kg'
       setWeightUnit(unit)
       const type: WorkoutType = existingWorkout?.type ?? profile?.lastWorkoutType ?? 'push'
@@ -120,6 +125,16 @@ export default function ActiveWorkoutScreen() {
     const setNumber = existingForExercise.length + 1
     const restDuration = 90 - restSeconds
 
+    const kcal = fitnessProfile
+      ? calculateSetKcal(
+          reps,
+          weight,
+          pendingActiveDuration,
+          fitnessProfile.userMetFactor,
+          fitnessProfile.bodyWeightKg,
+        )
+      : undefined
+
     const newSet = await logSet(uid, date, {
       exerciseId: activeExercise.id,
       exerciseName: activeExercise.name,
@@ -128,6 +143,7 @@ export default function ActiveWorkoutScreen() {
       weight,
       activeDuration: pendingActiveDuration,
       restDuration,
+      kcal,
       createdAt: new Date(),
     })
     setSets(prev => [...prev, newSet])
@@ -271,9 +287,22 @@ export default function ActiveWorkoutScreen() {
       {/* Today's logged sets */}
       {setsForActive.length > 0 && (
         <div className="mx-5 border border-iron-700 bg-iron-900 px-4 pb-2">
-          <p className="font-mono text-[10px] uppercase tracking-widest2 pt-3 pb-2" style={{ color: accentColor }}>
-            {activeExercise?.name}
-          </p>
+          <div className="pt-3 pb-2 flex items-baseline gap-3">
+            <p className="font-mono text-[10px] uppercase tracking-widest2" style={{ color: accentColor }}>
+              {activeExercise?.name}
+            </p>
+            {(() => {
+              const exerciseKcal = sets
+                .filter(s => s.exerciseId === activeExercise?.id && s.kcal !== undefined)
+                .reduce((sum, s) => sum + (s.kcal ?? 0), 0)
+              if (exerciseKcal === 0) return null
+              return (
+                <p className="font-mono text-[11px] text-acid tracking-widest mt-0.5">
+                  {Math.round(exerciseKcal * 10) / 10} KCAL
+                </p>
+              )
+            })()}
+          </div>
           {setsForActive.map(s => (
             <SetRow
               key={s.id}
