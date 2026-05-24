@@ -37,7 +37,7 @@ export default function WorkoutSummary({ workout, sets, weightUnit, onClose, onE
         {/* Header bar */}
         <div className="sticky top-0 bg-iron-900 border-b border-iron-700 px-5 py-4 flex items-center justify-between">
           <div>
-            <p className="font-mono text-iron-400 text-[10px] tracking-widest2 uppercase">{workout.date}</p>
+            <p className="font-mono text-iron-400 text-[10px] tracking-widest uppercase">{workout.date}</p>
             <h2
               className="font-display text-3xl leading-none mt-0.5"
               style={{ color }}
@@ -61,7 +61,7 @@ export default function WorkoutSummary({ workout, sets, weightUnit, onClose, onE
           ) : (
             Object.entries(grouped).map(([name, exerciseSets]) => (
               <div key={name} className="mb-6">
-                <p className="font-mono text-[10px] tracking-widest2 uppercase mb-2" style={{ color }}>{name}</p>
+                <p className="font-mono text-[10px] tracking-widest uppercase mb-2" style={{ color }}>{name}</p>
                 <div className="border border-iron-700">
                   {exerciseSets.map(s => (
                     <div key={s.id} className="flex justify-between items-center px-4 py-2.5 border-b border-iron-700 last:border-0">
