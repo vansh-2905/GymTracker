@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import type { UserProfile, WorkoutType } from '../types'
 import { getProfile, initProfile, updateLastWorkout } from '../services/profileService'
-import { getWorkout, startWorkout } from '../services/workoutService'
+import { getWorkout, startWorkout, getSets } from '../services/workoutService'
 import { nextWorkoutType } from '../utils/ppl'
 
 const TYPE_LABELS: Record<WorkoutType, string> = { push: 'PUSH', pull: 'PULL', legs: 'LEGS' }
@@ -31,6 +31,7 @@ export default function TodayScreen() {
   const [dueType, setDueType] = useState<WorkoutType>('push')
   const [todayWorkout, setTodayWorkout] = useState<{ exists: boolean; completed: boolean } | null>(null)
   const [overrideType, setOverrideType] = useState<WorkoutType | null>(null)
+  const [sessionKcal, setSessionKcal] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
   const date = todayDate()
@@ -43,8 +44,16 @@ export default function TodayScreen() {
       const next = nextWorkoutType(p.lastWorkoutType)
       setDueType(next)
       const existing = await getWorkout(uid, date)
-      if (existing) setTodayWorkout({ exists: true, completed: existing.completed })
-      else setTodayWorkout({ exists: false, completed: false })
+      if (existing) {
+        setTodayWorkout({ exists: true, completed: existing.completed })
+        const todaySets = await getSets(uid, date)
+        const hasKcal = todaySets.some(s => s.kcal !== undefined)
+        if (hasKcal) {
+          setSessionKcal(todaySets.reduce((sum, s) => sum + (s.kcal ?? 0), 0))
+        }
+      } else {
+        setTodayWorkout({ exists: false, completed: false })
+      }
       setLoading(false)
     }
     load()
@@ -145,6 +154,11 @@ export default function TodayScreen() {
           >
             Start {TYPE_LABELS[selectedType]} Workout
           </button>
+        )}
+        {sessionKcal !== null && sessionKcal > 0 && (
+          <p className="font-mono text-iron-400 text-[12px] tracking-widest mt-3">
+            {Math.round(sessionKcal)} KCAL BURNED TODAY
+          </p>
         )}
       </div>
     </div>
