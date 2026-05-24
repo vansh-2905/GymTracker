@@ -6,6 +6,7 @@ import TodayScreen from './screens/TodayScreen'
 import ActiveWorkoutScreen from './screens/ActiveWorkoutScreen'
 import CalendarScreen from './screens/CalendarScreen'
 import ExercisesScreen from './screens/ExercisesScreen'
+import SettingsScreen from './screens/SettingsScreen'
 import OnboardingScreen from './screens/OnboardingScreen'
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/workout/:date" element={<ActiveWorkoutScreen />} />
           <Route path="/calendar" element={<CalendarScreen />} />
           <Route path="/exercises" element={<ExercisesScreen />} />
+          <Route path="/settings" element={<SettingsScreen />} />
         </Routes>
         <BottomNav />
       </div>
