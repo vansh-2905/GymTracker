@@ -105,6 +105,11 @@ export default function SetRow({ set, unit, onEdit, onDelete }: Props) {
           {set.weight}<span className="text-iron-400 text-xs ml-0.5">{unit}</span>
         </span>
         <span className="font-mono text-iron-400 text-xs">{fmtTime(set.activeDuration)}</span>
+        {set.kcal !== undefined && (
+          <span className="font-mono text-[10px] text-iron-500">
+            {set.kcal} kcal
+          </span>
+        )}
         {/* Edit hint */}
         <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-iron-600 flex-shrink-0">
           <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" />
