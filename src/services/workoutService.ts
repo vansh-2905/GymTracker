@@ -66,6 +66,7 @@ export async function getSets(uid: string, date: string): Promise<WorkoutSet[]> 
       weight: data['weight'] as number,
       activeDuration: data['activeDuration'] as number,
       restDuration: data['restDuration'] as number,
+      kcal: data['kcal'] !== undefined ? (data['kcal'] as number) : undefined,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
     } as WorkoutSet
   })
@@ -137,6 +138,7 @@ export async function getRecentExerciseSets(
           weight: data['weight'] as number,
           activeDuration: data['activeDuration'] as number,
           restDuration: data['restDuration'] as number,
+          kcal: data['kcal'] !== undefined ? (data['kcal'] as number) : undefined,
           createdAt: (data['createdAt'] as Timestamp).toDate(),
         } as WorkoutSet
       })
