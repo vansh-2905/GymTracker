@@ -39,6 +39,7 @@ export default function SettingsScreen() {
   const [tempValue, setTempValue] = useState<string>('')
   const [restInput, setRestInput] = useState('')
   const [savedField, setSavedField] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -56,22 +57,39 @@ export default function SettingsScreen() {
     setTimeout(() => setSavedField(null), 1500)
   }
 
+  const flashError = (msg: string) => {
+    setErrorMsg(msg)
+    setTimeout(() => setErrorMsg(null), 3000)
+  }
+
   const handleWeightUnit = async (unit: WeightUnit) => {
     if (!user || !userProfile) return
-    await updateWeightUnit(user.uid, unit)
-    setUserProfile({ ...userProfile, weightUnit: unit })
-    flashSaved('weightUnit')
+    try {
+      await updateWeightUnit(user.uid, unit)
+      setUserProfile({ ...userProfile, weightUnit: unit })
+      flashSaved('weightUnit')
+    } catch {
+      flashError('Failed to save weight unit')
+    }
   }
 
   const handleRestBlur = async () => {
     if (!user) return
     const parsed = parseInt(restInput, 10)
-    if (isNaN(parsed) || parsed < 10) return
+    if (isNaN(parsed) || parsed < 10) {
+      setRestInput(String(userProfile?.restDefaultSeconds ?? 90))
+      return
+    }
     const clamped = Math.min(parsed, 600)
-    await updateRestDefault(user.uid, clamped)
-    setRestInput(String(clamped))
-    if (userProfile) setUserProfile({ ...userProfile, restDefaultSeconds: clamped })
-    flashSaved('rest')
+    try {
+      await updateRestDefault(user.uid, clamped)
+      setRestInput(String(clamped))
+      if (userProfile) setUserProfile({ ...userProfile, restDefaultSeconds: clamped })
+      flashSaved('rest')
+    } catch {
+      setRestInput(String(userProfile?.restDefaultSeconds ?? 90))
+      flashError('Failed to save rest timer')
+    }
   }
 
   const openEditField = (field: EditingField) => {
@@ -92,18 +110,36 @@ export default function SettingsScreen() {
   const saveField = async (field: EditingField, value: string) => {
     if (!user || !fp || field === null) return
     const updated: FitnessProfile = { ...fp }
-    if (field === 'biologicalSex') updated.biologicalSex = value as BiologicalSex
-    else if (field === 'age') updated.age = parseInt(value, 10)
-    else if (field === 'heightCm') updated.heightCm = parseFloat(value)
-    else if (field === 'bodyWeightKg') updated.bodyWeightKg = parseFloat(value)
-    else if (field === 'fitnessLevel') updated.fitnessLevel = value as FitnessLevel
-    else if (field === 'primaryGoal') updated.primaryGoal = value as PrimaryGoal
-    else if (field === 'bodyFatPct') updated.bodyFatPct = value === '' ? null : value
+    if (field === 'biologicalSex') {
+      updated.biologicalSex = value as BiologicalSex
+    } else if (field === 'age') {
+      const v = parseInt(value, 10)
+      if (isNaN(v) || v <= 0) return
+      updated.age = v
+    } else if (field === 'heightCm') {
+      const v = parseFloat(value)
+      if (isNaN(v) || v <= 0) return
+      updated.heightCm = v
+    } else if (field === 'bodyWeightKg') {
+      const v = parseFloat(value)
+      if (isNaN(v) || v <= 0) return
+      updated.bodyWeightKg = v
+    } else if (field === 'fitnessLevel') {
+      updated.fitnessLevel = value as FitnessLevel
+    } else if (field === 'primaryGoal') {
+      updated.primaryGoal = value as PrimaryGoal
+    } else if (field === 'bodyFatPct') {
+      updated.bodyFatPct = value === '' ? null : value
+    }
     updated.userMetFactor = computeUserMetFactor(updated.biologicalSex, updated.age, updated.fitnessLevel)
-    await saveFitnessProfile(user.uid, updated)
-    setFp(updated)
-    setEditingField(null)
-    flashSaved(field)
+    try {
+      await saveFitnessProfile(user.uid, updated)
+      setFp(updated)
+      setEditingField(null)
+      flashSaved(field)
+    } catch {
+      flashError('Failed to save profile')
+    }
   }
 
   const showCalorieProfile = fp !== null && !fp.skipped
@@ -111,6 +147,11 @@ export default function SettingsScreen() {
   return (
     <div className="min-h-screen bg-iron-950 text-white pb-24">
       <div className="h-0.5 bg-acid" />
+      {errorMsg && (
+        <div className="mx-5 mt-3 px-4 py-2 bg-red-900/40 border border-red-700">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-red-400">{errorMsg}</span>
+        </div>
+      )}
       <div className="px-5 pt-6 pb-4">
         <h1 className="font-display text-3xl tracking-wide text-white">SETTINGS</h1>
       </div>
@@ -127,7 +168,8 @@ export default function SettingsScreen() {
                 <button
                   key={u}
                   onClick={() => handleWeightUnit(u)}
-                  className={`px-3 py-1 font-mono text-[11px] uppercase tracking-widest border transition-colors ${
+                  disabled={!userProfile}
+                  className={`px-3 py-1 font-mono text-[11px] uppercase tracking-widest border transition-colors disabled:opacity-40 ${
                     userProfile?.weightUnit === u
                       ? 'bg-acid text-black border-acid'
                       : 'bg-transparent text-iron-400 border-iron-600'
