@@ -46,8 +46,9 @@ export default function ActiveWorkoutScreen() {
   const [editWeight, setEditWeight] = useState('')
   const [confirmDeleteSet, setConfirmDeleteSet] = useState<WorkoutSet | null>(null)
   const [fitnessProfile, setFitnessProfile] = useState<FitnessProfile | null>(null)
+  const [restDefault, setRestDefault] = useState(90)
 
-  const { setSeconds, restSeconds, phase, startSet, stopSet, resetTimers } = useTimer()
+  const { setSeconds, restSeconds, phase, startSet, stopSet, resetTimers } = useTimer(restDefault)
 
   useEffect(() => {
     if (!date) return
@@ -60,6 +61,7 @@ export default function ActiveWorkoutScreen() {
       ])
       setFitnessProfile(fp)
       const unit = profile?.weightUnit ?? 'kg'
+      setRestDefault(profile?.restDefaultSeconds ?? 90)
       setWeightUnit(unit)
       const type: WorkoutType = existingWorkout?.type ?? profile?.lastWorkoutType ?? 'push'
       setWorkoutType(type)
@@ -123,7 +125,7 @@ export default function ActiveWorkoutScreen() {
 
     const existingForExercise = sets.filter(s => s.exerciseId === activeExercise.id)
     const setNumber = existingForExercise.length + 1
-    const restDuration = 90 - restSeconds
+    const restDuration = restDefault - restSeconds
 
     const kcal = fitnessProfile
       ? calculateSetKcal(

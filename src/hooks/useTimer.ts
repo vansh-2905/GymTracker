@@ -1,10 +1,13 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 export type TimerPhase = 'idle' | 'set' | 'rest'
 
-export function useTimer() {
+export function useTimer(restDefault = 90) {
+  const restDefaultRef = useRef(restDefault)
+  useEffect(() => { restDefaultRef.current = restDefault }, [restDefault])
+
   const [setSeconds, setSetSeconds] = useState(0)
-  const [restSeconds, setRestSeconds] = useState(90)
+  const [restSeconds, setRestSeconds] = useState(restDefault)
   const [phase, setPhase] = useState<TimerPhase>('idle')
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   // Ref mirrors setSeconds so stopSet can read it synchronously (useState is async)
@@ -31,7 +34,7 @@ export function useTimer() {
   const stopSet = useCallback((): number => {
     clearInterval_()
     const elapsed = setSecondsRef.current
-    setRestSeconds(90)
+    setRestSeconds(restDefaultRef.current)
     setPhase('rest')
     intervalRef.current = setInterval(() => setRestSeconds(s => s - 1), 1000)
     return elapsed
@@ -41,7 +44,7 @@ export function useTimer() {
     clearInterval_()
     setSecondsRef.current = 0
     setSetSeconds(0)
-    setRestSeconds(90)
+    setRestSeconds(restDefaultRef.current)
     setPhase('idle')
   }, [])
 
