@@ -288,7 +288,7 @@ export default function ActiveWorkoutScreen() {
       {setsForActive.length > 0 && (
         <div className="mx-5 border border-iron-700 bg-iron-900 px-4 pb-2">
           <div className="pt-3 pb-2 flex items-baseline gap-3">
-            <p className="font-mono text-[10px] uppercase tracking-widest2" style={{ color: accentColor }}>
+            <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: accentColor }}>
               {activeExercise?.name}
             </p>
             {(() => {
