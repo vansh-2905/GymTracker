@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { PRESET_PROGRAMS, getProgramById, makeDayKey } from './programs'
+import { PRESET_PROGRAMS, CUSTOM_PALETTE, getProgramById, makeDayKey } from './programs'
 
 describe('PRESET_PROGRAMS', () => {
   it('has 4 presets', () => {
@@ -26,6 +26,10 @@ describe('PRESET_PROGRAMS', () => {
 
   it('all presets are marked isPreset: true', () => {
     for (const p of PRESET_PROGRAMS) expect(p.isPreset).toBe(true)
+  })
+
+  it('first preset is ppl (used as default fallback)', () => {
+    expect(PRESET_PROGRAMS[0].id).toBe('ppl')
   })
 })
 
@@ -84,5 +88,12 @@ describe('makeDayKey', () => {
 
   it('handles empty string with fallback', () => {
     expect(makeDayKey('', [])).toBe('day')
+  })
+})
+
+describe('CUSTOM_PALETTE', () => {
+  it('has 8 distinct colors', () => {
+    expect(CUSTOM_PALETTE).toHaveLength(8)
+    expect(new Set(CUSTOM_PALETTE).size).toBe(8)
   })
 })

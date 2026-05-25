@@ -1,3 +1,4 @@
+/** Matches a ProgramDay.key; widened from literal union to support custom programs. */
 export type WorkoutType = string
 export type WeightUnit = 'kg' | 'lbs'
 export type BiologicalSex = 'male' | 'female'

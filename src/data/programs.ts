@@ -44,12 +44,13 @@ export const CUSTOM_PALETTE = [
 
 export function getProgramById(
   id: string | undefined,
-  customPrograms: WorkoutProgram[] = [],
+  customPrograms?: WorkoutProgram[],
 ): WorkoutProgram {
+  const customs = customPrograms ?? []
   if (!id) return PRESET_PROGRAMS[0]
   return (
     PRESET_PROGRAMS.find(p => p.id === id) ??
-    customPrograms.find(p => p.id === id) ??
+    customs.find(p => p.id === id) ??
     PRESET_PROGRAMS[0]
   )
 }
