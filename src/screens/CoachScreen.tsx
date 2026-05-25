@@ -34,19 +34,23 @@ export default function CoachScreen() {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    let ignore = false
     async function loadHistory() {
       const q = query(messagesCol(uid), orderBy('createdAt', 'asc'), limit(50))
       const snap = await getDocs(q)
-      const loaded: ChatMessage[] = snap.docs.map(d => ({
-        id: d.id,
-        role: d.data()['role'] as 'user' | 'assistant',
-        content: d.data()['content'] as string,
-        createdAt: d.data()['createdAt']?.toDate?.() ?? new Date(),
-      }))
-      setMessages(loaded)
-      setInitialLoading(false)
+      if (!ignore) {
+        const loaded: ChatMessage[] = snap.docs.map(d => ({
+          id: d.id,
+          role: d.data()['role'] as 'user' | 'assistant',
+          content: d.data()['content'] as string,
+          createdAt: d.data()['createdAt']?.toDate?.() ?? new Date(),
+        }))
+        setMessages(loaded)
+        setInitialLoading(false)
+      }
     }
     loadHistory()
+    return () => { ignore = true }
   }, [uid])
 
   useEffect(() => {
@@ -64,7 +68,7 @@ export default function CoachScreen() {
 
     try {
       const idToken = await user!.getIdToken()
-      const history = messages.slice(-10).map(m => ({ role: m.role, content: m.content }))
+      const history = [...messages, userMsg].slice(-10).map(m => ({ role: m.role, content: m.content }))
       const res = await fetch('/.netlify/functions/coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
