@@ -74,6 +74,7 @@ async function executeTool(
 ): Promise<unknown> {
   if (name === 'getWorkoutDay') {
     const date = input['date'] as string
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: 'Invalid date format' }
     const workoutSnap = await db.doc(`users/${uid}/workouts/${date}`).get()
     if (!workoutSnap.exists) return { workout: null, sets: [] }
     const setsSnap = await db.collection(`users/${uid}/workouts/${date}/sets`).get()
@@ -84,6 +85,9 @@ async function executeTool(
   if (name === 'getWorkoutsInRange') {
     const startDate = input['startDate'] as string
     const endDate = input['endDate'] as string
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      return { error: 'Invalid date format' }
+    }
     const workoutsSnap = await db.collection(`users/${uid}/workouts`).get()
     const inRange = workoutsSnap.docs.filter(d => d.id >= startDate && d.id <= endDate)
     const results = await Promise.all(
@@ -100,7 +104,7 @@ async function executeTool(
 
   if (name === 'getExerciseHistory') {
     const exerciseName = (input['exerciseName'] as string).toLowerCase()
-    const limit = (input['limit'] as number | undefined) ?? 20
+    const limit = Math.min((input['limit'] as number | undefined) ?? 20, 50)
     const workoutsSnap = await db.collection(`users/${uid}/workouts`).get()
     const sortedDates = workoutsSnap.docs
       .map(d => d.id)
@@ -113,9 +117,10 @@ async function executeTool(
       const setsSnap = await db.collection(`users/${uid}/workouts/${date}/sets`).get()
       const matching = setsSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
-        .filter(s => ((s as Record<string, unknown>)['exerciseName'] as string)
-          .toLowerCase()
-          .includes(exerciseName))
+        .filter(s => {
+          const name = (s as Record<string, unknown>)['exerciseName']
+          return typeof name === 'string' && name.toLowerCase().includes(exerciseName)
+        })
       if (matching.length > 0) results.push({ date, sets: matching })
     }
     return results
