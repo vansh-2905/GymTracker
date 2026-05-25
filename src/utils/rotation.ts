@@ -1,5 +1,10 @@
 import type { ProgramDay, WorkoutProgram } from '../types'
 
+function parseDateLocal(d: string): number {
+  const [y, m, day] = d.split('-').map(Number)
+  return new Date(y, m - 1, day).getTime()
+}
+
 export function nextDayInProgram(
   lastKey: string | null,
   program: WorkoutProgram,
@@ -16,9 +21,7 @@ export function getProjectedDay(
   targetDate: string,
   program: WorkoutProgram,
 ): ProgramDay {
-  const last = new Date(lastDate)
-  const target = new Date(targetDate)
-  const days = Math.round((target.getTime() - last.getTime()) / 86_400_000)
+  const days = Math.round((parseDateLocal(targetDate) - parseDateLocal(lastDate)) / 86_400_000)
   let idx = program.days.findIndex(d => d.key === lastKey)
   if (idx === -1) idx = 0
   if (days <= 0) return program.days[idx]
