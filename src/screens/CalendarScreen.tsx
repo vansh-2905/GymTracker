@@ -1,19 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import type { Workout, WorkoutSet, WorkoutType } from '../types'
+import type { Workout, WorkoutSet, WorkoutProgram } from '../types'
 import { getWorkoutsInRange, getSets, startWorkout } from '../services/workoutService'
 import { getProfile, updateLastWorkout } from '../services/profileService'
-import { getProjectedType } from '../utils/ppl'
+import { getProgramById, PRESET_PROGRAMS } from '../data/programs'
+import { getProjectedDay } from '../utils/rotation'
 import WorkoutSummary from '../components/WorkoutSummary'
-
-const TYPE_COLOR: Record<WorkoutType, string> = {
-  push: '#60A5FA',
-  pull: '#4ADE80',
-  legs: '#FB923C',
-}
-const TYPE_LABELS: Record<WorkoutType, string> = { push: 'PUSH', pull: 'PULL', legs: 'LEGS' }
-const TABS: WorkoutType[] = ['push', 'pull', 'legs']
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate()
@@ -37,9 +30,10 @@ export default function CalendarScreen() {
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null)
   const [selectedSets, setSelectedSets] = useState<WorkoutSet[]>([])
   const [weightUnit, setWeightUnit] = useState('kg')
-  const [lastType, setLastType] = useState<WorkoutType | null>(null)
+  const [lastType, setLastType] = useState<string | null>(null)
   const [lastDate, setLastDate] = useState<string | null>(null)
-  const [startModal, setStartModal] = useState<{ date: string; type: WorkoutType } | null>(null)
+  const [activeProgram, setActiveProgram] = useState<WorkoutProgram>(PRESET_PROGRAMS[0])
+  const [startModal, setStartModal] = useState<{ date: string; dayKey: string } | null>(null)
 
   useEffect(() => {
     const start = `${viewYear}-${pad(viewMonth + 1)}-01`
@@ -54,11 +48,16 @@ export default function CalendarScreen() {
         setWeightUnit(p.weightUnit)
         setLastType(p.lastWorkoutType)
         setLastDate(p.lastWorkoutDate)
+        setActiveProgram(getProgramById(p.activeProgramId, p.customPrograms))
       }
     })
   }, [uid, viewYear, viewMonth])
 
   const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+
+  function dayColor(dayKey: string): string {
+    return activeProgram.days.find(d => d.key === dayKey)?.color ?? '#E8FF3D'
+  }
 
   const handleDayPress = async (dateStr: string) => {
     if (dateStr > today) return
@@ -68,15 +67,17 @@ export default function CalendarScreen() {
       setSelectedSets(sets)
       setSelectedWorkout(w)
     } else {
-      const projected = lastType && lastDate ? getProjectedType(lastType, lastDate, dateStr) : 'push'
-      setStartModal({ date: dateStr, type: projected as WorkoutType })
+      const projectedKey = lastType && lastDate
+        ? getProjectedDay(lastType, lastDate, dateStr, activeProgram).key
+        : activeProgram.days[0].key
+      setStartModal({ date: dateStr, dayKey: projectedKey })
     }
   }
 
   const handleStartPastWorkout = async () => {
     if (!startModal) return
-    await startWorkout(uid, startModal.date, startModal.type)
-    await updateLastWorkout(uid, startModal.type, startModal.date)
+    await startWorkout(uid, startModal.date, startModal.dayKey)
+    await updateLastWorkout(uid, startModal.dayKey, startModal.date)
     setStartModal(null)
     navigate(`/workout/${startModal.date}`)
   }
@@ -103,7 +104,6 @@ export default function CalendarScreen() {
         <p className="font-mono text-iron-500 text-[10px] uppercase tracking-widest mt-1">Workout History</p>
       </div>
 
-      {/* Month nav */}
       <div className="flex items-center justify-between px-5 mb-4">
         <button onClick={prevMonth} className="font-mono text-iron-400 text-sm hover:text-white transition-colors px-2 py-1">‹ PREV</button>
         <div className="text-center">
@@ -113,14 +113,12 @@ export default function CalendarScreen() {
         <button onClick={nextMonth} className="font-mono text-iron-400 text-sm hover:text-white transition-colors px-2 py-1">NEXT ›</button>
       </div>
 
-      {/* Day headers */}
       <div className="grid grid-cols-7 px-5 mb-1">
         {['SU','MO','TU','WE','TH','FR','SA'].map(d => (
           <div key={d} className="text-center font-mono text-iron-600 text-[9px] py-1">{d}</div>
         ))}
       </div>
 
-      {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-px px-5">
         {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
         {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -129,11 +127,11 @@ export default function CalendarScreen() {
           const workout = workouts[dateStr]
           const isToday = dateStr === today
           const isFuture = dateStr > today
-          const wColor = workout ? TYPE_COLOR[workout.type] : null
+          const wColor = workout ? dayColor(workout.type) : null
 
-          let projected: WorkoutType | null = null
+          let projectedColor: string | null = null
           if (isFuture && lastType && lastDate) {
-            projected = getProjectedType(lastType, lastDate, dateStr)
+            projectedColor = getProjectedDay(lastType, lastDate, dateStr, activeProgram).color
           }
 
           return (
@@ -156,16 +154,13 @@ export default function CalendarScreen() {
               {workout && (
                 <span
                   className="w-1.5 h-1.5 rounded-full mt-0.5"
-                  style={{
-                    backgroundColor: wColor ?? '#fff',
-                    opacity: workout.completed ? 1 : 0.4,
-                  }}
+                  style={{ backgroundColor: wColor ?? '#fff', opacity: workout.completed ? 1 : 0.4 }}
                 />
               )}
-              {!workout && isFuture && projected && (
+              {!workout && isFuture && projectedColor && (
                 <span
                   className="w-1 h-1 rounded-full mt-0.5"
-                  style={{ backgroundColor: TYPE_COLOR[projected], opacity: 0.15 }}
+                  style={{ backgroundColor: projectedColor, opacity: 0.15 }}
                 />
               )}
             </button>
@@ -173,12 +168,12 @@ export default function CalendarScreen() {
         })}
       </div>
 
-      {/* Legend */}
-      <div className="flex gap-5 px-5 mt-4 justify-center">
-        {TABS.map(t => (
-          <div key={t} className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: TYPE_COLOR[t] }} />
-            <span className="font-mono text-iron-500 text-[9px] uppercase tracking-wider">{t}</span>
+      {/* Legend — driven by active program */}
+      <div className="flex gap-4 px-5 mt-4 justify-center flex-wrap">
+        {activeProgram.days.map(d => (
+          <div key={d.key} className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }} />
+            <span className="font-mono text-iron-500 text-[9px] uppercase tracking-wider">{d.label}</span>
           </div>
         ))}
       </div>
@@ -200,7 +195,7 @@ export default function CalendarScreen() {
         <div className="fixed inset-0 bg-black/85 flex items-end z-50" onClick={() => setStartModal(null)}>
           <div
             className="bg-iron-900 w-full border-t-2"
-            style={{ borderColor: TYPE_COLOR[startModal.type] }}
+            style={{ borderColor: dayColor(startModal.dayKey) }}
             onClick={e => e.stopPropagation()}
           >
             <div className="p-5 flex flex-col gap-4">
@@ -209,18 +204,18 @@ export default function CalendarScreen() {
                 <h2 className="font-display text-3xl text-white mt-1">LOG WORKOUT</h2>
               </div>
               <div className="flex border border-iron-700">
-                {TABS.map(tab => (
+                {activeProgram.days.map((day, i) => (
                   <button
-                    key={tab}
-                    onClick={() => setStartModal(m => m ? { ...m, type: tab } : m)}
+                    key={day.key}
+                    onClick={() => setStartModal(m => m ? { ...m, dayKey: day.key } : m)}
                     className="flex-1 py-3 font-mono text-xs uppercase tracking-wider transition-colors"
                     style={{
-                      backgroundColor: startModal.type === tab ? TYPE_COLOR[tab] + '20' : 'transparent',
-                      color: startModal.type === tab ? TYPE_COLOR[tab] : '#555',
-                      borderRight: tab !== 'legs' ? '1px solid #222' : 'none',
+                      backgroundColor: startModal.dayKey === day.key ? day.color + '20' : 'transparent',
+                      color: startModal.dayKey === day.key ? day.color : '#555',
+                      borderRight: i < activeProgram.days.length - 1 ? '1px solid #222' : 'none',
                     }}
                   >
-                    {TYPE_LABELS[tab]}
+                    {day.label}
                   </button>
                 ))}
               </div>
@@ -234,9 +229,9 @@ export default function CalendarScreen() {
                 <button
                   onClick={handleStartPastWorkout}
                   className="flex-1 py-4 font-sans font-bold uppercase text-sm text-black"
-                  style={{ backgroundColor: TYPE_COLOR[startModal.type], letterSpacing: '0.12em' }}
+                  style={{ backgroundColor: dayColor(startModal.dayKey), letterSpacing: '0.12em' }}
                 >
-                  Start {TYPE_LABELS[startModal.type]}
+                  Start {activeProgram.days.find(d => d.key === startModal.dayKey)?.label ?? startModal.dayKey}
                 </button>
               </div>
             </div>
