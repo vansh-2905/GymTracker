@@ -20,11 +20,10 @@ export function buildSystemPrompt(
   today: string
 ): string {
   const unit = profile.weightUnit ?? 'kg'
-  const fp = fitnessProfile
 
   const fitnessSection =
-    fp && !fp.skipped
-      ? `\n- Age: ${fp.age}, Sex: ${fp.biologicalSex}, Height: ${fp.heightCm}cm, Body weight: ${fp.bodyWeightKg}kg\n- Fitness level: ${fp.fitnessLevel}, Primary goal: ${fp.primaryGoal}, Body fat: ${fp.bodyFatPct ?? 'unknown'}`
+    fitnessProfile && !fitnessProfile.skipped
+      ? `\n- Age: ${fitnessProfile.age}, Sex: ${fitnessProfile.biologicalSex}, Height: ${fitnessProfile.heightCm}cm, Body weight: ${fitnessProfile.bodyWeightKg}kg\n- Fitness level: ${fitnessProfile.fitnessLevel}, Primary goal: ${fitnessProfile.primaryGoal}, Body fat: ${fitnessProfile.bodyFatPct ?? 'unknown'}`
       : ''
 
   return `You are a personal gym coach. Answer questions about the user's workouts and provide personalized fitness advice. Use tools to fetch workout data when needed. For general fitness knowledge or profile-based calculations (maintenance calories, macros, BMI), answer directly without tools.
