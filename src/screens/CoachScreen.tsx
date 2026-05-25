@@ -1,0 +1,198 @@
+import { useEffect, useRef, useState } from 'react'
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  query,
+  orderBy,
+  limit,
+  serverTimestamp,
+} from 'firebase/firestore'
+import { useAuth } from '../auth/AuthContext'
+import { db } from '../firebase'
+import type { ChatMessage } from '../types'
+
+const SUGGESTIONS = [
+  'AM I OVERTRAINING?',
+  'WHAT ARE MY MAINTENANCE CALORIES?',
+  'SHOW MY BENCH PROGRESS',
+  'HOW WAS THIS WEEK?',
+]
+
+function messagesCol(uid: string) {
+  return collection(db, 'users', uid, 'coachMessages')
+}
+
+export default function CoachScreen() {
+  const { user } = useAuth()
+  const uid = user!.uid
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input, setInput] = useState('')
+  const [sending, setSending] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    async function loadHistory() {
+      const q = query(messagesCol(uid), orderBy('createdAt', 'asc'), limit(50))
+      const snap = await getDocs(q)
+      const loaded: ChatMessage[] = snap.docs.map(d => ({
+        id: d.id,
+        role: d.data()['role'] as 'user' | 'assistant',
+        content: d.data()['content'] as string,
+        createdAt: d.data()['createdAt']?.toDate?.() ?? new Date(),
+      }))
+      setMessages(loaded)
+      setInitialLoading(false)
+    }
+    loadHistory()
+  }, [uid])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, sending])
+
+  async function send(text: string) {
+    if (!text.trim() || sending) return
+    const userMsg: ChatMessage = { role: 'user', content: text.trim() }
+
+    await addDoc(messagesCol(uid), { ...userMsg, createdAt: serverTimestamp() })
+    setMessages(prev => [...prev, userMsg])
+    setInput('')
+    setSending(true)
+
+    try {
+      const idToken = await user!.getIdToken()
+      const history = messages.slice(-10).map(m => ({ role: m.role, content: m.content }))
+      const res = await fetch('/.netlify/functions/coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken, message: text.trim(), history }),
+      })
+      const data = (await res.json()) as { reply?: string; error?: string }
+      const reply = data.reply ?? 'Something went wrong — try again.'
+      const assistantMsg: ChatMessage = { role: 'assistant', content: reply }
+      await addDoc(messagesCol(uid), { ...assistantMsg, createdAt: serverTimestamp() })
+      setMessages(prev => [...prev, assistantMsg])
+    } catch {
+      const errMsg: ChatMessage = {
+        role: 'assistant',
+        content: 'Something went wrong — try again.',
+      }
+      setMessages(prev => [...prev, errMsg])
+    } finally {
+      setSending(false)
+    }
+  }
+
+  async function clearChat() {
+    if (!confirm('Clear all chat history?')) return
+    const snap = await getDocs(messagesCol(uid))
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)))
+    setMessages([])
+  }
+
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-iron-950">
+        <div className="w-8 h-8 border-2 border-acid border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-iron-950 flex flex-col">
+      <div className="h-0.5 w-full bg-acid" />
+
+      {/* Header */}
+      <div className="flex justify-between items-start px-5 pt-10 pb-4">
+        <div>
+          <h1 className="font-display text-5xl text-white leading-none">COACH</h1>
+          <p className="font-mono text-iron-500 text-[10px] tracking-widest uppercase mt-1">
+            Your personal gym brain
+          </p>
+        </div>
+        {messages.length > 0 && (
+          <button
+            onClick={clearChat}
+            className="font-mono text-iron-500 text-[10px] uppercase tracking-wider hover:text-iron-300 transition-colors mt-1"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+        {messages.length === 0 && !sending ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 pb-10">
+            <p className="font-mono text-iron-600 text-[10px] tracking-widest uppercase mb-2">
+              Ask anything
+            </p>
+            {SUGGESTIONS.map(s => (
+              <button
+                key={s}
+                onClick={() => send(s)}
+                className="w-full border border-iron-700 px-4 py-3 font-mono text-[11px] uppercase tracking-widest text-iron-300 hover:border-acid hover:text-acid transition-colors text-left"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <>
+            {messages.map((m, i) => (
+              <div
+                key={m.id ?? i}
+                className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] px-4 py-3 font-sans text-sm leading-relaxed ${
+                    m.role === 'user'
+                      ? 'bg-acid text-black'
+                      : 'bg-iron-800 text-white'
+                  }`}
+                >
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            {sending && (
+              <div className="flex justify-start">
+                <div className="bg-iron-800 px-4 py-3 flex gap-1.5 items-center">
+                  {[0, 1, 2].map(i => (
+                    <span
+                      key={i}
+                      className="w-1.5 h-1.5 bg-iron-400 rounded-full animate-bounce"
+                      style={{ animationDelay: `${i * 0.15}s` }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </>
+        )}
+      </div>
+
+      {/* Input */}
+      <div className="border-t border-iron-800 px-4 py-3 flex gap-3 bg-iron-950">
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send(input)}
+          placeholder="Ask anything..."
+          className="flex-1 bg-iron-900 border border-iron-700 px-4 py-3 font-mono text-sm text-white placeholder-iron-600 focus:outline-none focus:border-acid transition-colors"
+        />
+        <button
+          onClick={() => send(input)}
+          disabled={!input.trim() || sending}
+          className="px-4 py-3 bg-acid text-black font-mono text-[11px] uppercase tracking-widest disabled:opacity-40 transition-opacity"
+        >
+          →
+        </button>
+      </div>
+    </div>
+  )
+}
