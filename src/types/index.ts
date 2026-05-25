@@ -1,14 +1,29 @@
-export type WorkoutType = 'push' | 'pull' | 'legs'
+export type WorkoutType = string
 export type WeightUnit = 'kg' | 'lbs'
 export type BiologicalSex = 'male' | 'female'
 export type FitnessLevel = 'beginner' | 'intermediate' | 'active' | 'advanced' | 'athlete'
 export type PrimaryGoal = 'weight_loss' | 'muscle_gain' | 'maintenance' | 'endurance' | 'general_health'
+
+export interface ProgramDay {
+  key: string
+  label: string
+  color: string
+}
+
+export interface WorkoutProgram {
+  id: string
+  name: string
+  days: ProgramDay[]
+  isPreset: boolean
+}
 
 export interface UserProfile {
   lastWorkoutType: WorkoutType | null
   lastWorkoutDate: string | null
   weightUnit: WeightUnit
   restDefaultSeconds?: number
+  activeProgramId?: string
+  customPrograms?: WorkoutProgram[]
 }
 
 export interface FitnessProfile {
