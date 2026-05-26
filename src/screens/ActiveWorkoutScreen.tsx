@@ -36,6 +36,10 @@ export default function ActiveWorkoutScreen() {
   const [weightUnit, setWeightUnit] = useState<'kg' | 'lbs'>('kg')
   const [pendingReps, setPendingReps] = useState('')
   const [pendingWeight, setPendingWeight] = useState('')
+  const [pendingLeftReps, setPendingLeftReps] = useState('')
+  const [pendingLeftWeight, setPendingLeftWeight] = useState('')
+  const [pendingRightReps, setPendingRightReps] = useState('')
+  const [pendingRightWeight, setPendingRightWeight] = useState('')
   const [showSetModal, setShowSetModal] = useState(false)
   const [pendingActiveDuration, setPendingActiveDuration] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -119,36 +123,67 @@ export default function ActiveWorkoutScreen() {
 
   const handleSaveSet = async () => {
     if (!activeExercise || !date) return
-    const reps = parseInt(pendingReps)
-    const weight = parseFloat(pendingWeight)
-    if (isNaN(reps) || isNaN(weight)) return
 
     const existingForExercise = sets.filter(s => s.exerciseId === activeExercise.id)
     const setNumber = existingForExercise.length + 1
     const restDuration = restDefault - restSeconds
 
-    const kcal = fitnessProfile
-      ? calculateSetKcal(
-          reps,
-          weight,
-          pendingActiveDuration,
-          fitnessProfile.userMetFactor,
-          fitnessProfile.bodyWeightKg,
-        )
-      : undefined
+    if (activeExercise.bilateral) {
+      const lReps = parseInt(pendingLeftReps)
+      const lWeight = parseFloat(pendingLeftWeight)
+      const rReps = parseInt(pendingRightReps)
+      const rWeight = parseFloat(pendingRightWeight)
+      if (isNaN(lReps) || isNaN(lWeight) || isNaN(rReps) || isNaN(rWeight)) return
 
-    const newSet = await logSet(uid, date, {
-      exerciseId: activeExercise.id,
-      exerciseName: activeExercise.name,
-      setNumber,
-      reps,
-      weight,
-      activeDuration: pendingActiveDuration,
-      restDuration,
-      kcal,
-      createdAt: new Date(),
-    })
-    setSets(prev => [...prev, newSet])
+      const kcal = fitnessProfile
+        ? calculateSetKcal(
+            lReps + rReps,
+            (lWeight + rWeight) / 2,
+            pendingActiveDuration,
+            fitnessProfile.userMetFactor,
+            fitnessProfile.bodyWeightKg,
+          )
+        : undefined
+
+      const newSet = await logSet(uid, date, {
+        exerciseId: activeExercise.id,
+        exerciseName: activeExercise.name,
+        setNumber,
+        sides: { left: { reps: lReps, weight: lWeight }, right: { reps: rReps, weight: rWeight } },
+        activeDuration: pendingActiveDuration,
+        restDuration,
+        kcal,
+        createdAt: new Date(),
+      })
+      setSets(prev => [...prev, newSet])
+    } else {
+      const reps = parseInt(pendingReps)
+      const weight = parseFloat(pendingWeight)
+      if (isNaN(reps) || isNaN(weight)) return
+
+      const kcal = fitnessProfile
+        ? calculateSetKcal(
+            reps,
+            weight,
+            pendingActiveDuration,
+            fitnessProfile.userMetFactor,
+            fitnessProfile.bodyWeightKg,
+          )
+        : undefined
+
+      const newSet = await logSet(uid, date, {
+        exerciseId: activeExercise.id,
+        exerciseName: activeExercise.name,
+        setNumber,
+        reps,
+        weight,
+        activeDuration: pendingActiveDuration,
+        restDuration,
+        kcal,
+        createdAt: new Date(),
+      })
+      setSets(prev => [...prev, newSet])
+    }
     setShowSetModal(false)
   }
 
@@ -247,10 +282,26 @@ export default function ActiveWorkoutScreen() {
             {activeHistory.lastSets.map(s => (
               <span key={s.id} className="font-mono text-xs text-iron-300">
                 <span className="text-iron-500">#{s.setNumber}</span>{' '}
-                <span className="text-white font-bold">{s.reps}</span>
-                <span className="text-iron-500">reps</span>{' '}
-                <span className="text-acid font-bold">{s.weight}</span>
-                <span className="text-iron-500">{weightUnit}</span>
+                {s.sides ? (
+                  <>
+                    <span className="text-iron-500">L </span>
+                    <span className="text-white font-bold">{s.sides.left.reps}</span>
+                    <span className="text-iron-500">×</span>
+                    <span className="text-acid font-bold">{s.sides.left.weight}</span>
+                    <span className="text-iron-500">{weightUnit} / R </span>
+                    <span className="text-white font-bold">{s.sides.right.reps}</span>
+                    <span className="text-iron-500">×</span>
+                    <span className="text-acid font-bold">{s.sides.right.weight}</span>
+                    <span className="text-iron-500">{weightUnit}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-white font-bold">{s.reps}</span>
+                    <span className="text-iron-500">reps</span>{' '}
+                    <span className="text-acid font-bold">{s.weight}</span>
+                    <span className="text-iron-500">{weightUnit}</span>
+                  </>
+                )}
               </span>
             ))}
           </div>
@@ -399,7 +450,7 @@ export default function ActiveWorkoutScreen() {
               </div>
 
               {/* Weight quick-picks */}
-              {activeHistory && activeHistory.recentWeights.length > 0 && (
+              {!activeExercise?.bilateral && activeHistory && activeHistory.recentWeights.length > 0 && (
                 <div className="mb-4">
                   <p className="font-mono text-[9px] uppercase tracking-widest text-iron-500 mb-2">Recent weights</p>
                   <div className="flex gap-2">
@@ -421,30 +472,89 @@ export default function ActiveWorkoutScreen() {
                 </div>
               )}
 
-              <div className="flex gap-3 mb-4">
-                <div className="flex-1">
-                  <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Reps</label>
-                  <input
-                    type="number"
-                    className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
-                    placeholder="12"
-                    value={pendingReps}
-                    onChange={e => setPendingReps(e.target.value)}
-                    inputMode="numeric"
-                  />
+              {activeExercise?.bilateral ? (
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1">
+                    <p className="font-mono text-[10px] text-acid uppercase tracking-widest mb-2">L SIDE</p>
+                    <div className="flex flex-col gap-2">
+                      <div>
+                        <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-1">Reps</label>
+                        <input
+                          type="number"
+                          className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                          placeholder="12"
+                          value={pendingLeftReps}
+                          onChange={e => setPendingLeftReps(e.target.value)}
+                          inputMode="numeric"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-1">Weight ({weightUnit})</label>
+                        <input
+                          type="number"
+                          className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                          placeholder="20"
+                          value={pendingLeftWeight}
+                          onChange={e => setPendingLeftWeight(e.target.value)}
+                          inputMode="decimal"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-mono text-[10px] text-acid uppercase tracking-widest mb-2">R SIDE</p>
+                    <div className="flex flex-col gap-2">
+                      <div>
+                        <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-1">Reps</label>
+                        <input
+                          type="number"
+                          className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                          placeholder="12"
+                          value={pendingRightReps}
+                          onChange={e => setPendingRightReps(e.target.value)}
+                          inputMode="numeric"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-1">Weight ({weightUnit})</label>
+                        <input
+                          type="number"
+                          className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                          placeholder="20"
+                          value={pendingRightWeight}
+                          onChange={e => setPendingRightWeight(e.target.value)}
+                          inputMode="decimal"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Weight ({weightUnit})</label>
-                  <input
-                    type="number"
-                    className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
-                    placeholder="60"
-                    value={pendingWeight}
-                    onChange={e => setPendingWeight(e.target.value)}
-                    inputMode="decimal"
-                  />
+              ) : (
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1">
+                    <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Reps</label>
+                    <input
+                      type="number"
+                      className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                      placeholder="12"
+                      value={pendingReps}
+                      onChange={e => setPendingReps(e.target.value)}
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Weight ({weightUnit})</label>
+                    <input
+                      type="number"
+                      className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                      placeholder="60"
+                      value={pendingWeight}
+                      onChange={e => setPendingWeight(e.target.value)}
+                      inputMode="decimal"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="flex gap-3">
                 <button onClick={() => { setShowSetModal(false); resetTimers() }} className="flex-1 py-4 border border-iron-600 font-mono text-xs uppercase tracking-wider text-iron-400">
