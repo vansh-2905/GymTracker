@@ -48,6 +48,10 @@ export default function ActiveWorkoutScreen() {
   const [editingSet, setEditingSet] = useState<WorkoutSet | null>(null)
   const [editReps, setEditReps] = useState('')
   const [editWeight, setEditWeight] = useState('')
+  const [editLeftReps, setEditLeftReps] = useState('')
+  const [editLeftWeight, setEditLeftWeight] = useState('')
+  const [editRightReps, setEditRightReps] = useState('')
+  const [editRightWeight, setEditRightWeight] = useState('')
   const [confirmDeleteSet, setConfirmDeleteSet] = useState<WorkoutSet | null>(null)
   const [fitnessProfile, setFitnessProfile] = useState<FitnessProfile | null>(null)
   const [restDefault, setRestDefault] = useState(90)
@@ -199,19 +203,36 @@ export default function ActiveWorkoutScreen() {
   }
 
   const handleEditSet = (set: WorkoutSet) => {
-    if (set.sides) return
     setEditingSet(set)
-    setEditReps(String(set.reps ?? ''))
-    setEditWeight(String(set.weight ?? ''))
+    if (set.sides) {
+      setEditLeftReps(String(set.sides.left.reps))
+      setEditLeftWeight(String(set.sides.left.weight))
+      setEditRightReps(String(set.sides.right.reps))
+      setEditRightWeight(String(set.sides.right.weight))
+    } else {
+      setEditReps(String(set.reps ?? ''))
+      setEditWeight(String(set.weight ?? ''))
+    }
   }
 
   const handleSaveEdit = async () => {
     if (!editingSet || !date) return
-    const reps = parseInt(editReps)
-    const weight = parseFloat(editWeight)
-    if (isNaN(reps) || isNaN(weight)) return
-    await updateSet(uid, date, editingSet.id, { reps, weight })
-    setSets(prev => prev.map(s => s.id === editingSet.id ? { ...s, reps, weight } : s))
+    if (editingSet.sides) {
+      const lReps = parseInt(editLeftReps)
+      const lWeight = parseFloat(editLeftWeight)
+      const rReps = parseInt(editRightReps)
+      const rWeight = parseFloat(editRightWeight)
+      if (isNaN(lReps) || isNaN(lWeight) || isNaN(rReps) || isNaN(rWeight)) return
+      const sides = { left: { reps: lReps, weight: lWeight }, right: { reps: rReps, weight: rWeight } }
+      await updateSet(uid, date, editingSet.id, { sides })
+      setSets(prev => prev.map(s => s.id === editingSet.id ? { ...s, sides } : s))
+    } else {
+      const reps = parseInt(editReps)
+      const weight = parseFloat(editWeight)
+      if (isNaN(reps) || isNaN(weight)) return
+      await updateSet(uid, date, editingSet.id, { reps, weight })
+      setSets(prev => prev.map(s => s.id === editingSet.id ? { ...s, reps, weight } : s))
+    }
     setEditingSet(null)
   }
 
@@ -383,28 +404,83 @@ export default function ActiveWorkoutScreen() {
                 <h2 className="font-display text-3xl text-white">EDIT SET</h2>
                 <span className="font-mono text-iron-400 text-xs">#{editingSet.setNumber}</span>
               </div>
-              <div className="flex gap-3 mb-4">
-                <div className="flex-1">
-                  <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Reps</label>
-                  <input
-                    type="number"
-                    className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
-                    value={editReps}
-                    onChange={e => setEditReps(e.target.value)}
-                    inputMode="numeric"
-                  />
+              {editingSet.sides ? (
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1">
+                    <p className="font-mono text-[10px] text-acid uppercase tracking-widest mb-2">L SIDE</p>
+                    <div className="flex flex-col gap-2">
+                      <div>
+                        <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-1">Reps</label>
+                        <input
+                          type="number"
+                          className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                          value={editLeftReps}
+                          onChange={e => setEditLeftReps(e.target.value)}
+                          inputMode="numeric"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-1">Weight ({weightUnit})</label>
+                        <input
+                          type="number"
+                          className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                          value={editLeftWeight}
+                          onChange={e => setEditLeftWeight(e.target.value)}
+                          inputMode="decimal"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-mono text-[10px] text-acid uppercase tracking-widest mb-2">R SIDE</p>
+                    <div className="flex flex-col gap-2">
+                      <div>
+                        <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-1">Reps</label>
+                        <input
+                          type="number"
+                          className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                          value={editRightReps}
+                          onChange={e => setEditRightReps(e.target.value)}
+                          inputMode="numeric"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-1">Weight ({weightUnit})</label>
+                        <input
+                          type="number"
+                          className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                          value={editRightWeight}
+                          onChange={e => setEditRightWeight(e.target.value)}
+                          inputMode="decimal"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Weight ({weightUnit})</label>
-                  <input
-                    type="number"
-                    className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
-                    value={editWeight}
-                    onChange={e => setEditWeight(e.target.value)}
-                    inputMode="decimal"
-                  />
+              ) : (
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1">
+                    <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Reps</label>
+                    <input
+                      type="number"
+                      className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                      value={editReps}
+                      onChange={e => setEditReps(e.target.value)}
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Weight ({weightUnit})</label>
+                    <input
+                      type="number"
+                      className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                      value={editWeight}
+                      onChange={e => setEditWeight(e.target.value)}
+                      inputMode="decimal"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="flex gap-3">
                 <button onClick={() => setEditingSet(null)} className="flex-1 py-4 border border-iron-600 font-mono text-xs uppercase tracking-wider text-iron-400">
                   Cancel
