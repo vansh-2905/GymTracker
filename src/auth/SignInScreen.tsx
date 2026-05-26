@@ -15,7 +15,7 @@ export default function SignInScreen() {
       <div className="flex-1 flex flex-col justify-end p-8 pb-16">
         {/* Logo / Title */}
         <div className="mb-16">
-          <p className="font-mono text-iron-400 text-xs tracking-widest2 uppercase mb-3">
+          <p className="font-mono text-iron-400 text-xs tracking-widest uppercase mb-3">
             Push · Pull · Legs
           </p>
           <h1 className="font-display text-8xl leading-none text-white tracking-wide">

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import {
   collection,
   addDoc,
@@ -112,9 +114,9 @@ export default function CoachScreen() {
       {/* Header */}
       <div className="flex justify-between items-start px-5 pt-10 pb-4">
         <div>
-          <h1 className="font-display text-5xl text-white leading-none">COACH</h1>
+          <h1 className="font-display text-5xl text-white leading-none">CHAT</h1>
           <p className="font-mono text-iron-500 text-[10px] tracking-widest uppercase mt-1">
-            Your personal gym brain
+            Ask about your workouts
           </p>
         </div>
         {messages.length > 0 && (
@@ -158,7 +160,25 @@ export default function CoachScreen() {
                       : 'bg-iron-800 text-white'
                   }`}
                 >
-                  {m.content}
+                  {m.role === 'assistant' ? (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
+                        li: ({ children }) => <li className="mb-0.5">{children}</li>,
+                        strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                        h2: ({ children }) => <p className="font-bold text-[13px] uppercase tracking-wide mt-3 mb-1">{children}</p>,
+                        h3: ({ children }) => <p className="font-bold mt-2 mb-1">{children}</p>,
+                        table: ({ children }) => <table className="w-full text-xs border-collapse my-2">{children}</table>,
+                        th: ({ children }) => <th className="border border-iron-600 px-2 py-1 text-left font-mono uppercase text-[10px]">{children}</th>,
+                        td: ({ children }) => <td className="border border-iron-600 px-2 py-1">{children}</td>,
+                      }}
+                    >
+                      {m.content}
+                    </ReactMarkdown>
+                  ) : m.content}
                 </div>
               </div>
             ))}

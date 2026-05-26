@@ -14,10 +14,44 @@ if (!admin.apps.length) {
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const db = admin.firestore()
 
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? '*'
 const CORS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
+const RATE_LIMIT_PER_HOUR = 30
+
+async function checkRateLimit(uid: string): Promise<boolean> {
+  const ref = db.doc(`users/${uid}/data/rateLimit`)
+  const now = Date.now()
+  const windowMs = 60 * 60 * 1000
+
+  try {
+    const snap = await ref.get()
+    if (!snap.exists) {
+      await ref.set({ count: 1, windowStart: now })
+      return true
+    }
+
+    const data = snap.data()!
+    const windowStart: number =
+      typeof data.windowStart === 'number' ? data.windowStart : data.windowStart.toMillis()
+
+    if (now - windowStart > windowMs) {
+      await ref.set({ count: 1, windowStart: now })
+      return true
+    }
+
+    if ((data.count as number) >= RATE_LIMIT_PER_HOUR) return false
+
+    await ref.update({ count: admin.firestore.FieldValue.increment(1) })
+    return true
+  } catch {
+    // fail open on rate limit errors to avoid blocking legitimate requests
+    return true
+  }
 }
 
 const tools: Anthropic.Tool[] = [
@@ -144,8 +178,32 @@ export const handler: Handler = async event => {
       history: { role: 'user' | 'assistant'; content: string }[]
     }
 
+    if (!idToken || typeof idToken !== 'string') {
+      return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: 'Unauthorized' }) }
+    }
+    if (!message || typeof message !== 'string' || message.length > 2000) {
+      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Message must be a non-empty string under 2000 characters' }) }
+    }
+    if (!Array.isArray(history) || history.length > 100) {
+      return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid history' }) }
+    }
+    for (const entry of history) {
+      if (
+        (entry.role !== 'user' && entry.role !== 'assistant') ||
+        typeof entry.content !== 'string' ||
+        entry.content.length > 4000
+      ) {
+        return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'Invalid history entry' }) }
+      }
+    }
+
     const decoded = await admin.auth().verifyIdToken(idToken)
     const uid = decoded.uid
+
+    const allowed = await checkRateLimit(uid)
+    if (!allowed) {
+      return { statusCode: 429, headers: CORS, body: JSON.stringify({ error: 'Rate limit exceeded. Try again in an hour.' }) }
+    }
 
     const [profileSnap, fitnessSnap] = await Promise.all([
       db.doc(`users/${uid}/data/profile`).get(),
@@ -159,20 +217,23 @@ export const handler: Handler = async event => {
       today
     )
 
+    const trimmedHistory = history.slice(-20)
     const messages: Anthropic.MessageParam[] = [
-      ...history.map(m => ({ role: m.role, content: m.content } as Anthropic.MessageParam)),
+      ...trimmedHistory.map(m => ({ role: m.role, content: m.content } as Anthropic.MessageParam)),
       { role: 'user', content: message },
     ]
 
     let response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: systemPrompt,
       tools,
       messages,
     })
 
-    while (response.stop_reason === 'tool_use') {
+    let toolLoopCount = 0
+    while (response.stop_reason === 'tool_use' && toolLoopCount < 5) {
+      toolLoopCount++
       const toolUseBlocks = response.content.filter(
         (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
       )
@@ -189,7 +250,7 @@ export const handler: Handler = async event => {
       messages.push({ role: 'user', content: toolResults })
       response = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1024,
+        max_tokens: 2048,
         system: systemPrompt,
         tools,
         messages,

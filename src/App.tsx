@@ -33,7 +33,7 @@ export default function App() {
           <Route path="/calendar" element={<CalendarScreen />} />
           <Route path="/exercises" element={<ExercisesScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
-          <Route path="/coach" element={<CoachScreen />} />
+          <Route path="/chat" element={<CoachScreen />} />
         </Routes>
         <BottomNav />
       </div>

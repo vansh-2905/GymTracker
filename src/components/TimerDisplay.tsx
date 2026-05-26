@@ -23,7 +23,7 @@ export default function TimerDisplay({ seconds, label, active }: Props) {
 
   return (
     <div className="text-center w-full">
-      <p className="font-mono text-iron-400 text-[10px] tracking-widest2 uppercase mb-2">{label}</p>
+      <p className="font-mono text-iron-400 text[10px] tracking-widest uppercase mb-2">{label}</p>
       <p
         className="font-mono font-bold leading-none tabular-nums transition-colors duration-300"
         style={{ fontSize: 'clamp(4.5rem, 22vw, 7rem)', color, textShadow: glow }}
