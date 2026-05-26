@@ -95,6 +95,7 @@ export default function ActiveWorkoutScreen() {
     const recentWeights: number[] = []
     for (const session of sessions) {
       for (const s of [...session.sets].reverse()) {
+        if (s.weight === undefined) continue
         if (!seen.has(s.weight) && recentWeights.length < 3) {
           seen.add(s.weight)
           recentWeights.push(s.weight)
@@ -118,6 +119,10 @@ export default function ActiveWorkoutScreen() {
     setPendingActiveDuration(elapsed)
     setPendingReps('')
     setPendingWeight('')
+    setPendingLeftReps('')
+    setPendingLeftWeight('')
+    setPendingRightReps('')
+    setPendingRightWeight('')
     setShowSetModal(true)
   }
 
