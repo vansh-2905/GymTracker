@@ -159,6 +159,7 @@ export default function ActiveWorkoutScreen() {
   }
 
   const handleEditSet = (set: WorkoutSet) => {
+    if (set.sides) return
     setEditingSet(set)
     setEditReps(String(set.reps ?? ''))
     setEditWeight(String(set.weight ?? ''))
