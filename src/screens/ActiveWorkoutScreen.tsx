@@ -160,8 +160,8 @@ export default function ActiveWorkoutScreen() {
 
   const handleEditSet = (set: WorkoutSet) => {
     setEditingSet(set)
-    setEditReps(String(set.reps))
-    setEditWeight(String(set.weight))
+    setEditReps(String(set.reps ?? ''))
+    setEditWeight(String(set.weight ?? ''))
   }
 
   const handleSaveEdit = async () => {
@@ -368,7 +368,10 @@ export default function ActiveWorkoutScreen() {
             <div className="p-5">
               <h2 className="font-display text-3xl text-white mb-1">DELETE SET</h2>
               <p className="font-mono text-iron-400 text-xs mb-4">
-                Set #{confirmDeleteSet.setNumber} · {confirmDeleteSet.reps} reps · {confirmDeleteSet.weight}{weightUnit}
+                {confirmDeleteSet.sides
+                  ? `Set #${confirmDeleteSet.setNumber} · L ${confirmDeleteSet.sides.left.reps}×${confirmDeleteSet.sides.left.weight}${weightUnit} / R ${confirmDeleteSet.sides.right.reps}×${confirmDeleteSet.sides.right.weight}${weightUnit}`
+                  : `Set #${confirmDeleteSet.setNumber} · ${confirmDeleteSet.reps} reps · ${confirmDeleteSet.weight}${weightUnit}`
+                }
               </p>
               <p className="font-sans text-iron-300 text-sm mb-5">This cannot be undone.</p>
               <div className="flex gap-3">

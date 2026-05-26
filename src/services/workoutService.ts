@@ -100,7 +100,11 @@ export async function updateSet(
   uid: string,
   date: string,
   setId: string,
-  updates: { reps: number; weight: number },
+  updates: {
+    reps?: number
+    weight?: number
+    sides?: { left: { reps: number; weight: number }; right: { reps: number; weight: number } }
+  },
 ): Promise<void> {
   await updateDoc(doc(setsCol(uid, date), setId), updates)
 }

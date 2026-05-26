@@ -98,12 +98,33 @@ export default function SetRow({ set, unit, onEdit, onDelete }: Props) {
         onClick={handleTap}
       >
         <span className="font-mono text-iron-400 text-xs w-5 flex-shrink-0">#{set.setNumber}</span>
-        <span className="font-mono font-bold text-white text-base flex-1">
-          {set.reps}<span className="text-iron-400 text-xs ml-0.5">reps</span>
-        </span>
-        <span className="font-mono font-bold text-acid text-base">
-          {set.weight}<span className="text-iron-400 text-xs ml-0.5">{unit}</span>
-        </span>
+        {set.sides ? (
+          <span className="font-mono text-sm flex-1 flex gap-3">
+            <span>
+              <span className="text-iron-400 text-xs">L </span>
+              <span className="font-bold text-white">{set.sides.left.reps}</span>
+              <span className="text-iron-400 text-xs">×</span>
+              <span className="font-bold text-acid">{set.sides.left.weight}</span>
+              <span className="text-iron-400 text-xs ml-0.5">{unit}</span>
+            </span>
+            <span>
+              <span className="text-iron-400 text-xs">R </span>
+              <span className="font-bold text-white">{set.sides.right.reps}</span>
+              <span className="text-iron-400 text-xs">×</span>
+              <span className="font-bold text-acid">{set.sides.right.weight}</span>
+              <span className="text-iron-400 text-xs ml-0.5">{unit}</span>
+            </span>
+          </span>
+        ) : (
+          <>
+            <span className="font-mono font-bold text-white text-base flex-1">
+              {set.reps}<span className="text-iron-400 text-xs ml-0.5">reps</span>
+            </span>
+            <span className="font-mono font-bold text-acid text-base">
+              {set.weight}<span className="text-iron-400 text-xs ml-0.5">{unit}</span>
+            </span>
+          </>
+        )}
         <span className="font-mono text-iron-400 text-xs">{fmtTime(set.activeDuration)}</span>
         {set.kcal !== undefined && (
           <span className="font-mono text-[10px] text-iron-500">
