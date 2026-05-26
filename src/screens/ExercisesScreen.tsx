@@ -7,7 +7,7 @@ import { getProfile } from '../services/profileService'
 import { getProgramById, PRESET_PROGRAMS } from '../data/programs'
 import ExerciseCard from '../components/ExerciseCard'
 
-const EMPTY_FORM = { name: '', category: 'push' as WorkoutType, muscleGroup: '' }
+const EMPTY_FORM = { name: '', category: 'push' as WorkoutType, muscleGroup: '', bilateral: false }
 
 export default function ExercisesScreen() {
   const { user } = useAuth()
@@ -53,7 +53,12 @@ export default function ExercisesScreen() {
 
   const openEdit = (exercise: Exercise) => {
     setEditTarget(exercise)
-    setForm({ name: exercise.name, category: exercise.category, muscleGroup: exercise.muscleGroup })
+    setForm({
+      name: exercise.name,
+      category: exercise.category,
+      muscleGroup: exercise.muscleGroup,
+      bilateral: exercise.bilateral ?? false,
+    })
     setShowModal(true)
   }
 
@@ -184,6 +189,23 @@ export default function ExercisesScreen() {
                 value={form.muscleGroup}
                 onChange={e => setForm(f => ({ ...f, muscleGroup: e.target.value }))}
               />
+
+              <div className="flex border border-iron-700">
+                {(['standard', 'bilateral'] as const).map((mode, i) => (
+                  <button
+                    key={mode}
+                    onClick={() => setForm(f => ({ ...f, bilateral: mode === 'bilateral' }))}
+                    className="flex-1 py-3 font-mono text-xs uppercase tracking-wider transition-colors"
+                    style={{
+                      backgroundColor: (mode === 'bilateral') === form.bilateral ? formDayColor + '20' : 'transparent',
+                      color: (mode === 'bilateral') === form.bilateral ? formDayColor : '#555',
+                      borderRight: i === 0 ? '1px solid #222' : 'none',
+                    }}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
 
               <div className="flex border border-iron-700">
                 {activeProgram.days.map((d, i) => (
