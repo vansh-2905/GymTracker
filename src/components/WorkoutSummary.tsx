@@ -66,8 +66,17 @@ export default function WorkoutSummary({ workout, sets, weightUnit, onClose, onE
                   {exerciseSets.map(s => (
                     <div key={s.id} className="flex justify-between items-center px-4 py-2.5 border-b border-iron-700 last:border-0">
                       <span className="font-mono text-iron-400 text-xs">#{s.setNumber}</span>
-                      <span className="font-mono font-bold text-white">{s.reps} <span className="text-iron-400 font-normal text-xs">reps</span></span>
-                      <span className="font-mono font-bold text-acid">{s.weight}<span className="text-iron-400 font-normal text-xs ml-0.5">{weightUnit}</span></span>
+                      {s.sides ? (
+                        <span className="font-mono text-xs flex gap-2">
+                          <span><span className="text-iron-400">L </span><span className="font-bold text-white">{s.sides.left.reps}</span><span className="text-iron-400">×</span><span className="font-bold text-acid">{s.sides.left.weight}</span><span className="text-iron-400 text-[10px] ml-0.5">{weightUnit}</span></span>
+                          <span><span className="text-iron-400">R </span><span className="font-bold text-white">{s.sides.right.reps}</span><span className="text-iron-400">×</span><span className="font-bold text-acid">{s.sides.right.weight}</span><span className="text-iron-400 text-[10px] ml-0.5">{weightUnit}</span></span>
+                        </span>
+                      ) : (
+                        <>
+                          <span className="font-mono font-bold text-white">{s.reps} <span className="text-iron-400 font-normal text-xs">reps</span></span>
+                          <span className="font-mono font-bold text-acid">{s.weight}<span className="text-iron-400 font-normal text-xs ml-0.5">{weightUnit}</span></span>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
