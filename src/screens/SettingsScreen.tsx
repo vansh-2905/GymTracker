@@ -10,6 +10,7 @@ import {
 import { getFitnessProfile, saveFitnessProfile } from '../services/fitnessProfileService'
 import { computeUserMetFactor } from '../utils/calorieCalc'
 import { getProgramById, PRESET_PROGRAMS, CUSTOM_PALETTE, makeDayKey } from '../data/programs'
+import { seedProgramExercises } from '../utils/programExercises'
 import type {
   UserProfile, FitnessProfile, BiologicalSex, FitnessLevel,
   PrimaryGoal, WeightUnit, WorkoutProgram, ProgramDay,
@@ -110,6 +111,7 @@ export default function SettingsScreen() {
       if (userProfile) setUserProfile({ ...userProfile, activeProgramId: programId, lastWorkoutType: null })
       setShowProgramPicker(false)
       flashSaved('program')
+      seedProgramExercises(user.uid, prog) // fire-and-forget; seeds if templates empty
     } catch {
       flashError('Failed to save program')
     }

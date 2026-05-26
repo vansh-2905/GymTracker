@@ -3,7 +3,8 @@ import { useAuth } from '../auth/AuthContext'
 import { saveFitnessProfile } from '../services/fitnessProfileService'
 import { setActiveProgramId } from '../services/profileService'
 import { computeUserMetFactor } from '../utils/calorieCalc'
-import { PRESET_PROGRAMS } from '../data/programs'
+import { PRESET_PROGRAMS, getProgramById } from '../data/programs'
+import { seedProgramExercises } from '../utils/programExercises'
 import type { BiologicalSex, FitnessLevel, PrimaryGoal } from '../types'
 
 const TOTAL_STEPS = 8
@@ -117,6 +118,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
         completedAt: todayStr(),
       })
       await setActiveProgramId(user!.uid, selectedProgramId)
+      seedProgramExercises(user!.uid, getProgramById(selectedProgramId, [])) // fire-and-forget
       onComplete()
     } finally {
       setSaving(false)

@@ -7,11 +7,6 @@ import { getProfile } from '../services/profileService'
 import { getProgramById, PRESET_PROGRAMS } from '../data/programs'
 import ExerciseCard from '../components/ExerciseCard'
 
-// Used only in the Add/Edit modal for muscle-group classification
-const MUSCLE_TABS: WorkoutType[] = ['push', 'pull', 'legs']
-const MUSCLE_LABELS: Record<string, string> = { push: 'PUSH', pull: 'PULL', legs: 'LEGS' }
-const MUSCLE_COLORS: Record<string, string> = { push: '#60A5FA', pull: '#4ADE80', legs: '#FB923C' }
-
 const EMPTY_FORM = { name: '', category: 'push' as WorkoutType, muscleGroup: '' }
 
 export default function ExercisesScreen() {
@@ -44,10 +39,15 @@ export default function ExercisesScreen() {
   const currentTemplate = templates[activeDayKey] ?? { type: activeDayKey, exerciseIds: [] }
   const activeDayObj = activeProgram.days.find(d => d.key === activeDayKey) ?? activeProgram.days[0]
   const activeDayColor = activeDayObj.color
+  // Show exercises for this day: those categorized by the day key + any already in the template
+  const displayExercises = exercises.filter(
+    e => e.category === activeDayKey || currentTemplate.exerciseIds.includes(e.id)
+  )
+  const formDayColor = activeProgram.days.find(d => d.key === form.category)?.color ?? activeDayColor
 
   const openAdd = () => {
     setEditTarget(null)
-    setForm(EMPTY_FORM)
+    setForm({ ...EMPTY_FORM, category: activeDayKey })
     setShowModal(true)
   }
 
@@ -126,18 +126,18 @@ export default function ExercisesScreen() {
       {/* Template count */}
       <div className="px-5 mb-3">
         <p className="font-mono text-iron-500 text-[10px] uppercase tracking-widest">
-          {currentTemplate.exerciseIds.length} of {exercises.length} in {activeDayObj.label} template
+          {currentTemplate.exerciseIds.length} in {activeDayObj.label} template · {displayExercises.length} exercises
         </p>
       </div>
 
-      {/* Exercise list — all exercises, checkboxes indicate which are in this day's template */}
+      {/* Exercise list — filtered to this day's exercises */}
       <div className="flex flex-col gap-px mx-5 mb-5">
-        {exercises.length === 0 && (
+        {displayExercises.length === 0 && (
           <div className="border border-iron-700 p-8 text-center">
             <p className="font-mono text-iron-500 text-xs uppercase tracking-wider">No exercises yet</p>
           </div>
         )}
-        {exercises.map(ex => (
+        {displayExercises.map(ex => (
           <ExerciseCard
             key={ex.id}
             exercise={ex}
@@ -164,7 +164,7 @@ export default function ExercisesScreen() {
         <div className="fixed inset-0 bg-black/85 flex items-end z-50" onClick={() => setShowModal(false)}>
           <div
             className="bg-iron-900 w-full border-t-2"
-            style={{ borderColor: activeDayColor }}
+            style={{ borderColor: formDayColor }}
             onClick={e => e.stopPropagation()}
           >
             <div className="p-5 flex flex-col gap-4">
@@ -186,18 +186,18 @@ export default function ExercisesScreen() {
               />
 
               <div className="flex border border-iron-700">
-                {MUSCLE_TABS.map((tab, i) => (
+                {activeProgram.days.map((d, i) => (
                   <button
-                    key={tab}
-                    onClick={() => setForm(f => ({ ...f, category: tab }))}
+                    key={d.key}
+                    onClick={() => setForm(f => ({ ...f, category: d.key }))}
                     className="flex-1 py-3 font-mono text-xs uppercase tracking-wider transition-colors"
                     style={{
-                      backgroundColor: form.category === tab ? MUSCLE_COLORS[tab] + '20' : 'transparent',
-                      color: form.category === tab ? MUSCLE_COLORS[tab] : '#555',
-                      borderRight: i < MUSCLE_TABS.length - 1 ? '1px solid #222' : 'none',
+                      backgroundColor: form.category === d.key ? d.color + '20' : 'transparent',
+                      color: form.category === d.key ? d.color : '#555',
+                      borderRight: i < activeProgram.days.length - 1 ? '1px solid #222' : 'none',
                     }}
                   >
-                    {MUSCLE_LABELS[tab]}
+                    {d.label}
                   </button>
                 ))}
               </div>
@@ -212,7 +212,7 @@ export default function ExercisesScreen() {
                 <button
                   onClick={handleSave}
                   className="flex-1 py-4 font-sans font-bold uppercase text-sm text-black"
-                  style={{ backgroundColor: MUSCLE_COLORS[form.category] ?? '#E8FF3D', letterSpacing: '0.12em' }}
+                  style={{ backgroundColor: formDayColor, letterSpacing: '0.12em' }}
                 >
                   Save
                 </button>
