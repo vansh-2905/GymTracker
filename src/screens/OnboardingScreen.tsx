@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { saveFitnessProfile } from '../services/fitnessProfileService'
+import { setActiveProgramId } from '../services/profileService'
 import { computeUserMetFactor } from '../utils/calorieCalc'
+import { PRESET_PROGRAMS } from '../data/programs'
 import type { BiologicalSex, FitnessLevel, PrimaryGoal } from '../types'
 
-const TOTAL_STEPS = 7
+const TOTAL_STEPS = 8
 
 const FITNESS_OPTIONS: { label: string; value: FitnessLevel }[] = [
   { label: 'Beginner — I rarely or never exercise', value: 'beginner' },
@@ -49,6 +51,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
   const { user } = useAuth()
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
+  const [selectedProgramId, setSelectedProgramId] = useState('ppl')
 
   const [biologicalSex, setBiologicalSex] = useState<BiologicalSex | null>(null)
   const [age, setAge] = useState('')
@@ -81,13 +84,14 @@ export default function OnboardingScreen({ onComplete }: Props) {
   }
 
   const canContinue =
-    (step === 1 && biologicalSex !== null) ||
-    (step === 2 && age !== '' && parseInt(age) >= 13 && parseInt(age) <= 100) ||
-    (step === 3 && (heightUnit === 'cm' ? heightCm !== '' : heightFt !== '')) ||
-    (step === 4 && bodyWeightVal !== '') ||
-    (step === 5 && fitnessLevel !== null) ||
-    (step === 6 && primaryGoal !== null) ||
-    step === 7
+    step === 1 ||
+    (step === 2 && biologicalSex !== null) ||
+    (step === 3 && age !== '' && parseInt(age) >= 13 && parseInt(age) <= 100) ||
+    (step === 4 && (heightUnit === 'cm' ? heightCm !== '' : heightFt !== '')) ||
+    (step === 5 && bodyWeightVal !== '') ||
+    (step === 6 && fitnessLevel !== null) ||
+    (step === 7 && primaryGoal !== null) ||
+    step === 8
 
   async function handleFinish(skipped: boolean) {
     setSaving(true)
@@ -112,6 +116,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
         skipped,
         completedAt: todayStr(),
       })
+      await setActiveProgramId(user!.uid, selectedProgramId)
       onComplete()
     } finally {
       setSaving(false)
@@ -163,6 +168,42 @@ export default function OnboardingScreen({ onComplete }: Props) {
       {/* Step content */}
       <div className="flex-1 flex flex-col justify-center px-5 pb-32">
         {step === 1 && (
+          <div className="flex flex-col flex-1">
+            <p className="font-mono text-iron-500 text-[10px] uppercase tracking-widest mb-2">Step 1 of {TOTAL_STEPS}</p>
+            <h2 className="font-display text-4xl text-white mb-2">YOUR SPLIT</h2>
+            <p className="font-sans text-iron-400 text-sm mb-6">Choose how you structure your training week.</p>
+            <div className="flex flex-col gap-3 flex-1 overflow-y-auto">
+              {PRESET_PROGRAMS.map(prog => (
+                <button
+                  key={prog.id}
+                  onClick={() => setSelectedProgramId(prog.id)}
+                  className="w-full text-left border p-4 transition-colors"
+                  style={{
+                    borderColor: selectedProgramId === prog.id ? '#E8FF3D' : '#333',
+                    backgroundColor: selectedProgramId === prog.id ? '#E8FF3D08' : 'transparent',
+                  }}
+                >
+                  <span className="font-mono text-[11px] uppercase tracking-widest text-white block mb-2">
+                    {prog.name}
+                  </span>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {prog.days.map(d => (
+                      <span
+                        key={d.key}
+                        className="px-2 py-0.5 font-mono text-[9px] uppercase tracking-widest"
+                        style={{ backgroundColor: d.color + '25', color: d.color, border: `1px solid ${d.color}40` }}
+                      >
+                        {d.label}
+                      </span>
+                    ))}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
           <div>
             <p className="font-mono text-iron-400 text-[10px] tracking-widest uppercase mb-3">ABOUT YOU</p>
             <h1 className="font-display text-4xl leading-tight mb-10">
@@ -186,7 +227,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
           </div>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div>
             <p className="font-mono text-iron-400 text-[10px] tracking-widest uppercase mb-3">ABOUT YOU</p>
             <h1 className="font-display text-4xl leading-tight mb-10">WHAT IS<br />YOUR AGE?</h1>
@@ -206,7 +247,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div>
             <p className="font-mono text-iron-400 text-[10px] tracking-widest uppercase mb-3">ABOUT YOU</p>
             <h1 className="font-display text-4xl leading-tight mb-6">WHAT IS<br />YOUR HEIGHT?</h1>
@@ -258,7 +299,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
           </div>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <div>
             <p className="font-mono text-iron-400 text-[10px] tracking-widest uppercase mb-3">ABOUT YOU</p>
             <h1 className="font-display text-4xl leading-tight mb-6">YOUR BODY<br />WEIGHT?</h1>
@@ -285,7 +326,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
           </div>
         )}
 
-        {step === 5 && (
+        {step === 6 && (
           <div>
             <p className="font-mono text-iron-400 text-[10px] tracking-widest uppercase mb-3">YOUR TRAINING</p>
             <h1 className="font-display text-4xl leading-tight mb-8">FITNESS<br />LEVEL?</h1>
@@ -303,7 +344,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
           </div>
         )}
 
-        {step === 6 && (
+        {step === 7 && (
           <div>
             <p className="font-mono text-iron-400 text-[10px] tracking-widest uppercase mb-3">YOUR TRAINING</p>
             <h1 className="font-display text-4xl leading-tight mb-8">PRIMARY<br />GOAL?</h1>
@@ -321,7 +362,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
           </div>
         )}
 
-        {step === 7 && (
+        {step === 8 && (
           <div>
             <p className="font-mono text-iron-400 text-[10px] tracking-widest uppercase mb-3">OPTIONAL</p>
             <h1 className="font-display text-4xl leading-tight mb-2">BODY FAT<br />PERCENTAGE?</h1>
