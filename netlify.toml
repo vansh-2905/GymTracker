@@ -1,6 +1,5 @@
 [functions]
   node_bundler = "esbuild"
-  excluded_patterns = ["**/*.test.ts", "**/*.test.js"]
 
 [[redirects]]
   from = "/*"
