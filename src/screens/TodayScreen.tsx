@@ -114,7 +114,6 @@ export default function TodayScreen() {
               <p className="font-mono text-iron-500 text-[10px] tracking-widest uppercase mb-2">Today's sets</p>
               <div className="border border-iron-800 bg-iron-900">
                 {Object.entries(grouped).map(([name, sets], idx, arr) => {
-                  const unit = profile?.weightUnit ?? 'kg'
                   const exKcal = sets.some(s => s.kcal !== undefined)
                     ? Math.round(sets.reduce((s, x) => s + (x.kcal ?? 0), 0))
                     : null
