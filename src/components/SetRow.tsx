@@ -90,14 +90,14 @@ export default function SetRow({ set, unit, onEdit, onDelete }: Props) {
 
       {/* Row content */}
       <div
-        className="flex items-center gap-3 py-2.5 border-b border-iron-700 last:border-0 bg-iron-900 transition-transform duration-150"
+        className="flex items-center gap-3 py-2.5 border-b border-iron-800 last:border-0 bg-iron-900 transition-transform duration-150"
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={handleTap}
       >
-        <span className="font-mono text-iron-400 text-xs w-5 flex-shrink-0">#{set.setNumber}</span>
+        <span className="font-mono text-iron-600 text-[10px] w-5 flex-shrink-0 tabular-nums">#{set.setNumber}</span>
         {set.sides ? (
           <span className="font-mono text-sm flex-1 flex gap-3">
             <span>
@@ -127,8 +127,8 @@ export default function SetRow({ set, unit, onEdit, onDelete }: Props) {
         )}
         <span className="font-mono text-iron-400 text-xs">{fmtTime(set.activeDuration)}</span>
         {set.kcal !== undefined && (
-          <span className="font-mono text-[10px] text-iron-500">
-            {set.kcal} kcal
+          <span className="font-mono text-[9px] text-iron-500 bg-iron-800 px-1.5 py-0.5 tabular-nums">
+            {set.kcal}k
           </span>
         )}
         {/* Edit hint */}

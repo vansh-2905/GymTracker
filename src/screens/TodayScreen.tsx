@@ -17,7 +17,7 @@ function pad(n: number): string {
 }
 
 export default function TodayScreen() {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const uid = user!.uid
   const navigate = useNavigate()
 
@@ -79,19 +79,11 @@ export default function TodayScreen() {
       <div className="h-0.5 w-full" style={{ backgroundColor: color }} />
 
       <div className="flex-1 flex flex-col p-5 pt-10">
-        <div className="flex justify-between items-start mb-10">
-          <div>
-            <p className="font-mono text-iron-400 text-[10px] tracking-widest uppercase">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-            </p>
-            <h1 className="font-display text-5xl text-white leading-none mt-1">TODAY</h1>
-          </div>
-          <button
-            onClick={signOut}
-            className="font-mono text-iron-500 text-[10px] uppercase tracking-wider hover:text-iron-300 transition-colors mt-1"
-          >
-            Sign out
-          </button>
+        <div className="mb-10">
+          <p className="font-mono text-iron-500 text-[10px] tracking-widest uppercase">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+          </p>
+          <h1 className="font-display text-5xl text-white leading-none mt-1">TODAY</h1>
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center mb-10">
@@ -120,19 +112,27 @@ export default function TodayScreen() {
           return (
             <div className="mb-5">
               <p className="font-mono text-iron-500 text-[10px] tracking-widest uppercase mb-2">Today's sets</p>
-              <div className="border border-iron-800 divide-y divide-iron-800">
-                {Object.entries(grouped).map(([name, sets]) => {
-                  const lastWeight = sets[sets.length - 1].weight
+              <div className="border border-iron-800 bg-iron-900">
+                {Object.entries(grouped).map(([name, sets], idx, arr) => {
                   const unit = profile?.weightUnit ?? 'kg'
+                  const exKcal = sets.some(s => s.kcal !== undefined)
+                    ? Math.round(sets.reduce((s, x) => s + (x.kcal ?? 0), 0))
+                    : null
                   return (
-                    <div key={name} className="flex justify-between items-center py-2 px-3">
+                    <div
+                      key={name}
+                      className="flex justify-between items-center py-2.5 px-3"
+                      style={{ borderBottom: idx < arr.length - 1 ? '1px solid #1a1a1a' : 'none' }}
+                    >
                       <span className="font-mono text-white text-[11px] uppercase tracking-wide">{name}</span>
-                      <span className="font-mono text-iron-400 text-[10px] tracking-wider">
-                        {sets.length} {sets.length === 1 ? 'set' : 'sets'} · {lastWeight}{unit}
-                        {sets.some(s => s.kcal !== undefined) && (
-                          <span className="text-acid ml-2">{Math.round(sets.reduce((s, x) => s + (x.kcal ?? 0), 0))} kcal</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-iron-500 text-[10px] tracking-wider">
+                          {sets.length} {sets.length === 1 ? 'set' : 'sets'}
+                        </span>
+                        {exKcal !== null && (
+                          <span className="font-mono text-[10px] text-acid tracking-wider">{exKcal} kcal</span>
                         )}
-                      </span>
+                      </div>
                     </div>
                   )
                 })}
@@ -143,17 +143,18 @@ export default function TodayScreen() {
 
         {/* Type override — driven by active program days */}
         <div className="mb-4">
-          <p className="font-mono text-iron-500 text-[10px] tracking-widest uppercase mb-2">Override</p>
-          <div className="flex border border-iron-700">
+          <p className="font-mono text-iron-500 text-[10px] tracking-widest uppercase mb-2">Select day</p>
+          <div className="flex border border-iron-700 bg-iron-900">
             {activeProgram.days.map((day, i) => (
               <button
                 key={day.key}
                 onClick={() => setOverrideDay(day.key === dueDay.key && overrideDay?.key === day.key ? null : day)}
-                className="flex-1 py-3 font-mono text-xs uppercase tracking-wider transition-colors"
+                className="flex-1 py-3 font-mono text-xs uppercase tracking-wider transition-all active:opacity-70"
                 style={{
-                  backgroundColor: selectedDay.key === day.key ? day.color + '22' : 'transparent',
-                  color: selectedDay.key === day.key ? day.color : '#555',
-                  borderRight: i < activeProgram.days.length - 1 ? '1px solid #222' : 'none',
+                  backgroundColor: selectedDay.key === day.key ? day.color + '1A' : 'transparent',
+                  color: selectedDay.key === day.key ? day.color : '#444',
+                  borderRight: i < activeProgram.days.length - 1 ? '1px solid #1a1a1a' : 'none',
+                  borderBottom: selectedDay.key === day.key ? `2px solid ${day.color}` : '2px solid transparent',
                 }}
               >
                 {day.label}
@@ -180,9 +181,13 @@ export default function TodayScreen() {
           </button>
         )}
         {sessionKcal !== null && sessionKcal > 0 && (
-          <p className="font-mono text-iron-400 text-[12px] tracking-widest mt-3">
-            {Math.round(sessionKcal)} KCAL BURNED TODAY
-          </p>
+          <div className="flex items-center justify-center gap-2 mt-3">
+            <div className="h-px flex-1 bg-iron-800" />
+            <p className="font-mono text-acid text-[11px] tracking-widest">
+              {Math.round(sessionKcal)} KCAL BURNED
+            </p>
+            <div className="h-px flex-1 bg-iron-800" />
+          </div>
         )}
       </div>
     </div>

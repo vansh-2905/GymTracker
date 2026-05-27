@@ -112,6 +112,12 @@ export async function deleteSet(uid: string, date: string, setId: string): Promi
   await deleteDoc(doc(setsCol(uid, date), setId))
 }
 
+export async function deleteWorkout(uid: string, date: string): Promise<void> {
+  const setsSnap = await getDocs(setsCol(uid, date))
+  await Promise.all(setsSnap.docs.map(d => deleteDoc(d.ref)))
+  await deleteDoc(workoutRef(uid, date))
+}
+
 export async function getRecentExerciseSets(
   uid: string,
   exerciseId: string,

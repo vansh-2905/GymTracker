@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import type { Exercise, WorkoutSet, WorkoutType, FitnessProfile } from '../types'
 import { getProfile } from '../services/profileService'
+import { getProgramById } from '../data/programs'
 import { getTemplate } from '../services/templateService'
 import { getExercises } from '../services/exerciseService'
 import { completeWorkout, getWorkout, getSets, logSet, updateSet, deleteSet, getRecentExerciseSets } from '../services/workoutService'
@@ -12,11 +13,6 @@ import { useTimer } from '../hooks/useTimer'
 import TimerDisplay from '../components/TimerDisplay'
 import SetRow from '../components/SetRow'
 
-const TYPE_COLOR: Record<WorkoutType, string> = {
-  push: '#60A5FA',
-  pull: '#4ADE80',
-  legs: '#FB923C',
-}
 
 interface ExerciseHistory {
   lastSets: WorkoutSet[]
@@ -55,6 +51,7 @@ export default function ActiveWorkoutScreen() {
   const [confirmDeleteSet, setConfirmDeleteSet] = useState<WorkoutSet | null>(null)
   const [fitnessProfile, setFitnessProfile] = useState<FitnessProfile | null>(null)
   const [restDefault, setRestDefault] = useState(90)
+  const [accentColor, setAccentColor] = useState('#E8FF3D')
 
   const { setSeconds, restSeconds, phase, startSet, stopSet, resetTimers } = useTimer(restDefault)
 
@@ -73,6 +70,9 @@ export default function ActiveWorkoutScreen() {
       setWeightUnit(unit)
       const type: WorkoutType = existingWorkout?.type ?? profile?.lastWorkoutType ?? 'push'
       setWorkoutType(type)
+      const prog = getProgramById(profile?.activeProgramId, profile?.customPrograms)
+      const dayColor = prog.days.find(d => d.key === type)?.color ?? '#E8FF3D'
+      setAccentColor(dayColor)
       const template = await getTemplate(uid, type)
       const allExercises = await getExercises(uid)
       const templateExercises = template.exerciseIds
@@ -251,7 +251,6 @@ export default function ActiveWorkoutScreen() {
 
   const setsForActive = sets.filter(s => s.exerciseId === activeExercise?.id)
   const activeHistory = activeExercise ? history[activeExercise.id] : undefined
-  const accentColor = TYPE_COLOR[workoutType]
 
   if (loading) {
     return (
@@ -262,7 +261,7 @@ export default function ActiveWorkoutScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-iron-950 flex flex-col pb-24">
+    <div className="min-h-screen bg-iron-950 flex flex-col pb-nav">
       <div className="h-0.5 w-full" style={{ backgroundColor: accentColor }} />
 
       {/* Header */}
@@ -288,11 +287,11 @@ export default function ActiveWorkoutScreen() {
           <button
             key={ex.id}
             onClick={() => handleSelectExercise(ex)}
-            className="px-3 py-2 text-xs whitespace-nowrap font-mono uppercase tracking-wider flex-shrink-0 border transition-colors"
+            className="px-3 py-2 text-xs whitespace-nowrap font-mono uppercase tracking-wider flex-shrink-0 border transition-all active:opacity-70"
             style={
               activeExercise?.id === ex.id
-                ? { borderColor: accentColor, color: accentColor, backgroundColor: accentColor + '15' }
-                : { borderColor: '#2C2C2C', color: '#555' }
+                ? { borderColor: accentColor, color: accentColor, backgroundColor: accentColor + '18' }
+                : { borderColor: '#222', color: '#444', backgroundColor: '#111' }
             }
           >
             {ex.name}
@@ -302,7 +301,7 @@ export default function ActiveWorkoutScreen() {
 
       {/* Last session banner */}
       {activeHistory && activeHistory.lastSets.length > 0 && (
-        <div className="mx-5 mb-3 border border-iron-700 bg-iron-900 px-4 py-3">
+        <div className="mx-5 mb-3 border border-iron-800 bg-iron-900 px-4 py-3">
           <p className="font-mono text-[9px] uppercase tracking-widest text-iron-500 mb-1.5">Last session</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             {activeHistory.lastSets.map(s => (
@@ -335,7 +334,7 @@ export default function ActiveWorkoutScreen() {
       )}
 
       {/* Timer */}
-      <div className="mx-5 mb-4 border border-iron-700 bg-iron-900 p-6 flex flex-col items-center gap-5">
+      <div className="mx-5 mb-4 border border-iron-800 bg-iron-900 p-6 flex flex-col items-center gap-5">
         {phase === 'rest' ? (
           <>
             <TimerDisplay seconds={restSeconds} label="Rest Timer" negative />

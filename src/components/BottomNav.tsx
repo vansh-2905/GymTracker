@@ -51,22 +51,22 @@ const tabs = [
 
 export default function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-iron-900 border-t border-iron-700 flex">
+    <nav className="fixed bottom-0 left-0 right-0 bg-iron-950/92 backdrop-blur-md border-t border-iron-800 flex" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {tabs.map(tab => (
         <NavLink
           key={tab.to}
           to={tab.to}
           end={tab.to === '/'}
           className={({ isActive }) =>
-            `flex-1 flex flex-col items-center pt-3 pb-5 gap-1.5 transition-colors relative ${
-              isActive ? 'text-acid' : 'text-iron-400'
+            `flex-1 flex flex-col items-center pt-3 pb-4 gap-1.5 transition-colors relative active:opacity-70 ${
+              isActive ? 'text-acid' : 'text-iron-500'
             }`
           }
         >
           {({ isActive }) => (
             <>
               {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-acid" />
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-0.5 bg-acid" />
               )}
               {tab.icon}
               <span className="font-mono text-[9px] tracking-widest">{tab.label}</span>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import type { Workout, WorkoutSet, WorkoutProgram } from '../types'
-import { getWorkoutsInRange, getSets, startWorkout } from '../services/workoutService'
+import { getWorkoutsInRange, getSets, startWorkout, deleteWorkout } from '../services/workoutService'
 import { getProfile, updateLastWorkout } from '../services/profileService'
 import { getProgramById, PRESET_PROGRAMS } from '../data/programs'
 import { getProjectedDay } from '../utils/rotation'
@@ -187,6 +187,16 @@ export default function CalendarScreen() {
           onEdit={() => {
             setSelectedWorkout(null)
             navigate(`/workout/${selectedWorkout.date}`)
+          }}
+          onDelete={async () => {
+            const date = selectedWorkout.date
+            await deleteWorkout(user!.uid, date)
+            setWorkouts(prev => {
+              const next = { ...prev }
+              delete next[date]
+              return next
+            })
+            setSelectedWorkout(null)
           }}
         />
       )}

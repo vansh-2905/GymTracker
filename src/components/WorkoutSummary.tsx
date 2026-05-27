@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Workout, WorkoutSet } from '../types'
 
 interface Props {
@@ -6,6 +7,7 @@ interface Props {
   weightUnit: string
   onClose: () => void
   onEdit?: () => void
+  onDelete?: () => Promise<void>
 }
 
 const TYPE_COLOR: Record<string, string> = {
@@ -22,11 +24,20 @@ function groupByExercise(sets: WorkoutSet[]): Record<string, WorkoutSet[]> {
   }, {} as Record<string, WorkoutSet[]>)
 }
 
-export default function WorkoutSummary({ workout, sets, weightUnit, onClose, onEdit }: Props) {
+export default function WorkoutSummary({ workout, sets, weightUnit, onClose, onEdit, onDelete }: Props) {
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const grouped = groupByExercise(sets)
   const color = TYPE_COLOR[workout.type] ?? '#E8FF3D'
   const totalKcal = sets.reduce((sum, s) => sum + (s.kcal ?? 0), 0)
   const hasKcal = sets.some(s => s.kcal !== undefined)
+
+  const handleConfirmDelete = async () => {
+    if (!onDelete) return
+    setDeleting(true)
+    await onDelete()
+    setDeleting(false)
+  }
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-end z-50" onClick={onClose}>
@@ -84,17 +95,62 @@ export default function WorkoutSummary({ workout, sets, weightUnit, onClose, onE
             ))
           )}
 
-          {onEdit && (
-            <button
-              onClick={onEdit}
-              className="w-full py-4 bg-acid text-black font-sans font-bold uppercase tracking-widest text-sm mt-2"
-              style={{ letterSpacing: '0.12em' }}
-            >
-              Edit Workout
-            </button>
-          )}
+          <div className="flex gap-3 mt-2">
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="flex-1 py-4 bg-acid text-black font-sans font-bold uppercase text-sm"
+                style={{ letterSpacing: '0.12em' }}
+              >
+                Edit Workout
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="py-4 border border-red-700 text-red-500 font-mono text-xs uppercase tracking-wider transition-colors hover:bg-red-700/10"
+                style={{ minWidth: '4rem', paddingLeft: '1rem', paddingRight: '1rem' }}
+              >
+                Delete
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Delete confirm modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-60 px-5">
+          <div className="bg-iron-900 w-full border border-red-700">
+            <div className="p-5">
+              <h2 className="font-display text-3xl text-white mb-1">DELETE WORKOUT</h2>
+              <p className="font-mono text-iron-400 text-xs mb-1">
+                {workout.date} · {workout.type.toUpperCase()} DAY
+              </p>
+              <p className="font-mono text-iron-500 text-[10px] mb-5">
+                {sets.length} {sets.length === 1 ? 'set' : 'sets'} will be permanently removed.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                  className="flex-1 py-4 border border-iron-600 font-mono text-xs uppercase tracking-wider text-iron-400"
+                >
+                  Keep It
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleting}
+                  className="flex-1 py-4 bg-red-600 font-sans font-bold uppercase text-sm text-white disabled:opacity-60"
+                  style={{ letterSpacing: '0.12em' }}
+                >
+                  {deleting ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -5,11 +5,15 @@ export default function SignInScreen() {
 
   return (
     <div className="min-h-screen bg-iron-950 flex flex-col relative overflow-hidden">
-      {/* Background accent */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-acid" />
+      {/* Background accents */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-acid" />
       <div
-        className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-5"
-        style={{ background: 'radial-gradient(circle, #E8FF3D 0%, transparent 70%)' }}
+        className="absolute -top-60 -right-60 w-[500px] h-[500px] rounded-full opacity-[0.04] pointer-events-none"
+        style={{ background: 'radial-gradient(circle, #E8FF3D 0%, transparent 65%)' }}
+      />
+      <div
+        className="absolute bottom-0 -left-40 w-80 h-80 rounded-full opacity-[0.03] pointer-events-none"
+        style={{ background: 'radial-gradient(circle, #60A5FA 0%, transparent 65%)' }}
       />
 
       <div className="flex-1 flex flex-col justify-end p-8 pb-16">
@@ -46,8 +50,8 @@ export default function SignInScreen() {
           Continue with Google
         </button>
 
-        <p className="text-iron-500 text-xs text-center mt-6 font-mono">
-          Your data stays yours — Firebase Auth
+        <p className="text-iron-600 text-[10px] text-center mt-5 font-mono tracking-widest uppercase">
+          Your data stays yours
         </p>
       </div>
     </div>

@@ -34,4 +34,10 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+  .pb-safe {
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+  }
+  .pb-nav {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
 }
