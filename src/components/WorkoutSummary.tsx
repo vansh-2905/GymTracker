@@ -86,9 +86,7 @@ export default function WorkoutSummary({ workout, sets, weightUnit, onClose, onE
                       {s.isTimed ? (
                         <span className="font-mono text-xs flex items-center gap-2">
                           <span className="font-bold text-acid">{fmtSecs(s.activeDuration)}<span className="text-iron-400 font-normal ml-1">hold</span></span>
-                          {s.weight !== undefined && s.weight > 0 && (
-                            <span className="font-bold text-white">{s.weight}<span className="text-iron-400 font-normal text-[10px] ml-0.5">{weightUnit}</span></span>
-                          )}
+                          <span className="font-bold text-white">{s.weight ?? 0}<span className="text-iron-400 font-normal text-[10px] ml-0.5">{weightUnit}</span></span>
                         </span>
                       ) : s.sides ? (
                         <span className="font-mono text-xs flex gap-2">

@@ -103,11 +103,9 @@ export default function SetRow({ set, unit, onEdit, onDelete }: Props) {
             <span className="font-mono font-bold text-acid text-base flex-1">
               {fmtTime(set.activeDuration)}<span className="text-iron-400 text-xs ml-1">hold</span>
             </span>
-            {set.weight !== undefined && set.weight > 0 && (
-              <span className="font-mono font-bold text-white text-base">
-                {set.weight}<span className="text-iron-400 text-xs ml-0.5">{unit}</span>
-              </span>
-            )}
+            <span className="font-mono font-bold text-white text-base">
+              {set.weight ?? 0}<span className="text-iron-400 text-xs ml-0.5">{unit}</span>
+            </span>
           </>
         ) : set.sides ? (
           <span className="font-mono text-sm flex-1 flex gap-3">
