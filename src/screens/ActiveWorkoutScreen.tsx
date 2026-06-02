@@ -161,10 +161,10 @@ export default function ActiveWorkoutScreen() {
         exerciseName: activeExercise.name,
         setNumber,
         isTimed: true,
-        ...(weight > 0 && { weight }),
+        weight,
         activeDuration: pendingActiveDuration,
         restDuration,
-        ...(kcal !== undefined && { kcal }),
+        kcal,
         createdAt: new Date(),
       })
       setSets(prev => [...prev, newSet])
@@ -264,8 +264,8 @@ export default function ActiveWorkoutScreen() {
       const duration = parseInt(editDuration)
       if (isNaN(duration) || duration <= 0) return
       const weight = parseFloat(editWeight) || 0
-      await updateSet(uid, date, editingSet.id, { isTimed: true, activeDuration: duration, ...(weight > 0 && { weight }) })
-      setSets(prev => prev.map(s => s.id === editingSet.id ? { ...s, activeDuration: duration, weight: weight > 0 ? weight : undefined } : s))
+      await updateSet(uid, date, editingSet.id, { isTimed: true, activeDuration: duration, weight })
+      setSets(prev => prev.map(s => s.id === editingSet.id ? { ...s, activeDuration: duration, weight } : s))
     } else {
       const reps = parseInt(editReps)
       const weight = parseFloat(editWeight)
