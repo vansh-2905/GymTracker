@@ -46,6 +46,7 @@ export interface Exercise {
   category: WorkoutType
   muscleGroup: string
   bilateral?: boolean
+  timed?: boolean
 }
 
 export interface Template {
@@ -64,6 +65,7 @@ export interface WorkoutSet {
     left: { reps: number; weight: number }
     right: { reps: number; weight: number }
   }
+  isTimed?: boolean
   activeDuration: number
   restDuration: number
   kcal?: number

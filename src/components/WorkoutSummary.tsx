@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import type { Workout, WorkoutSet } from '../types'
 
+function fmtSecs(secs: number): string {
+  const m = Math.floor(secs / 60)
+  const s = secs % 60
+  return m > 0 ? `${m}m ${s}s` : `${s}s`
+}
+
 interface Props {
   workout: Workout
   sets: WorkoutSet[]
@@ -77,7 +83,14 @@ export default function WorkoutSummary({ workout, sets, weightUnit, onClose, onE
                   {exerciseSets.map(s => (
                     <div key={s.id} className="flex justify-between items-center px-4 py-2.5 border-b border-iron-700 last:border-0">
                       <span className="font-mono text-iron-400 text-xs">#{s.setNumber}</span>
-                      {s.sides ? (
+                      {s.isTimed ? (
+                        <span className="font-mono text-xs flex items-center gap-2">
+                          <span className="font-bold text-acid">{fmtSecs(s.activeDuration)}<span className="text-iron-400 font-normal ml-1">hold</span></span>
+                          {s.weight !== undefined && s.weight > 0 && (
+                            <span className="font-bold text-white">{s.weight}<span className="text-iron-400 font-normal text-[10px] ml-0.5">{weightUnit}</span></span>
+                          )}
+                        </span>
+                      ) : s.sides ? (
                         <span className="font-mono text-xs flex gap-2">
                           <span><span className="text-iron-400">L </span><span className="font-bold text-white">{s.sides.left.reps}</span><span className="text-iron-400">×</span><span className="font-bold text-acid">{s.sides.left.weight}</span><span className="text-iron-400 text-[10px] ml-0.5">{weightUnit}</span></span>
                           <span><span className="text-iron-400">R </span><span className="font-bold text-white">{s.sides.right.reps}</span><span className="text-iron-400">×</span><span className="font-bold text-acid">{s.sides.right.weight}</span><span className="text-iron-400 text-[10px] ml-0.5">{weightUnit}</span></span>

@@ -98,7 +98,18 @@ export default function SetRow({ set, unit, onEdit, onDelete }: Props) {
         onClick={handleTap}
       >
         <span className="font-mono text-iron-600 text-[10px] w-5 flex-shrink-0 tabular-nums">#{set.setNumber}</span>
-        {set.sides ? (
+        {set.isTimed ? (
+          <>
+            <span className="font-mono font-bold text-acid text-base flex-1">
+              {fmtTime(set.activeDuration)}<span className="text-iron-400 text-xs ml-1">hold</span>
+            </span>
+            {set.weight !== undefined && set.weight > 0 && (
+              <span className="font-mono font-bold text-white text-base">
+                {set.weight}<span className="text-iron-400 text-xs ml-0.5">{unit}</span>
+              </span>
+            )}
+          </>
+        ) : set.sides ? (
           <span className="font-mono text-sm flex-1 flex gap-3">
             <span>
               <span className="text-iron-400 text-xs">L </span>
@@ -125,7 +136,7 @@ export default function SetRow({ set, unit, onEdit, onDelete }: Props) {
             </span>
           </>
         )}
-        <span className="font-mono text-iron-400 text-xs">{fmtTime(set.activeDuration)}</span>
+        {!set.isTimed && <span className="font-mono text-iron-400 text-xs">{fmtTime(set.activeDuration)}</span>}
         {set.kcal !== undefined && (
           <span className="font-mono text-[9px] text-iron-500 bg-iron-800 px-1.5 py-0.5 tabular-nums">
             {set.kcal}k

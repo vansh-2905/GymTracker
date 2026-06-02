@@ -65,6 +65,7 @@ export async function getSets(uid: string, date: string): Promise<WorkoutSet[]> 
       reps: data['reps'] !== undefined ? (data['reps'] as number) : undefined,
       weight: data['weight'] !== undefined ? (data['weight'] as number) : undefined,
       sides: data['sides'] as WorkoutSet['sides'] | undefined,
+      isTimed: data['isTimed'] as boolean | undefined,
       activeDuration: data['activeDuration'] as number,
       restDuration: data['restDuration'] as number,
       kcal: data['kcal'] !== undefined ? (data['kcal'] as number) : undefined,
@@ -102,8 +103,9 @@ export async function updateSet(
   date: string,
   setId: string,
   updates:
-    | { reps: number; weight: number; sides?: never }
-    | { sides: { left: { reps: number; weight: number }; right: { reps: number; weight: number } }; reps?: never; weight?: never },
+    | { reps: number; weight: number; sides?: never; isTimed?: never }
+    | { sides: { left: { reps: number; weight: number }; right: { reps: number; weight: number } }; reps?: never; weight?: never; isTimed?: never }
+    | { isTimed: true; activeDuration: number; weight?: number; reps?: never; sides?: never },
 ): Promise<void> {
   await updateDoc(doc(setsCol(uid, date), setId), updates)
 }

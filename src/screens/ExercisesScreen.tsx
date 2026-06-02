@@ -7,7 +7,7 @@ import { getProfile } from '../services/profileService'
 import { getProgramById, PRESET_PROGRAMS } from '../data/programs'
 import ExerciseCard from '../components/ExerciseCard'
 
-const EMPTY_FORM = { name: '', category: 'push' as WorkoutType, muscleGroup: '', bilateral: false }
+const EMPTY_FORM = { name: '', category: 'push' as WorkoutType, muscleGroup: '', bilateral: false, timed: false }
 
 type ExercisesCache = {
   uid: string
@@ -69,17 +69,23 @@ export default function ExercisesScreen() {
       category: exercise.category,
       muscleGroup: exercise.muscleGroup,
       bilateral: exercise.bilateral ?? false,
+      timed: exercise.timed ?? false,
     })
     setShowModal(true)
   }
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.muscleGroup.trim()) return
+    const exerciseData = {
+      ...form,
+      bilateral: form.bilateral && !form.timed,
+      timed: form.timed && !form.bilateral,
+    }
     if (editTarget) {
-      await updateExercise(uid, editTarget.id, form)
-      setExercises(prev => prev.map(e => e.id === editTarget.id ? { ...e, ...form } : e))
+      await updateExercise(uid, editTarget.id, exerciseData)
+      setExercises(prev => prev.map(e => e.id === editTarget.id ? { ...e, ...exerciseData } : e))
     } else {
-      const created = await addExercise(uid, form)
+      const created = await addExercise(uid, exerciseData)
       setExercises(prev => [...prev, created])
     }
     setShowModal(false)
@@ -202,20 +208,27 @@ export default function ExercisesScreen() {
               />
 
               <div className="flex border border-iron-700">
-                {(['standard', 'bilateral'] as const).map((mode, i) => (
-                  <button
-                    key={mode}
-                    onClick={() => setForm(f => ({ ...f, bilateral: mode === 'bilateral' }))}
-                    className="flex-1 py-3 font-mono text-xs uppercase tracking-wider transition-colors"
-                    style={{
-                      backgroundColor: (mode === 'bilateral') === form.bilateral ? formDayColor + '20' : 'transparent',
-                      color: (mode === 'bilateral') === form.bilateral ? formDayColor : '#555',
-                      borderRight: i === 0 ? '1px solid #222' : 'none',
-                    }}
-                  >
-                    {mode}
-                  </button>
-                ))}
+                {(['standard', 'bilateral', 'timed'] as const).map((mode, i) => {
+                  const active = mode === 'bilateral' ? form.bilateral : mode === 'timed' ? form.timed : (!form.bilateral && !form.timed)
+                  return (
+                    <button
+                      key={mode}
+                      onClick={() => setForm(f => ({
+                        ...f,
+                        bilateral: mode === 'bilateral',
+                        timed: mode === 'timed',
+                      }))}
+                      className="flex-1 py-3 font-mono text-xs uppercase tracking-wider transition-colors"
+                      style={{
+                        backgroundColor: active ? formDayColor + '20' : 'transparent',
+                        color: active ? formDayColor : '#555',
+                        borderRight: i < 2 ? '1px solid #222' : 'none',
+                      }}
+                    >
+                      {mode}
+                    </button>
+                  )
+                })}
               </div>
 
               <div className="flex border border-iron-700">

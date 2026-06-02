@@ -14,6 +14,12 @@ import TimerDisplay from '../components/TimerDisplay'
 import SetRow from '../components/SetRow'
 
 
+function fmtSecs(secs: number): string {
+  const m = Math.floor(secs / 60)
+  const s = secs % 60
+  return m > 0 ? `${m}m ${s}s` : `${s}s`
+}
+
 interface ExerciseHistory {
   lastSets: WorkoutSet[]
   recentWeights: number[]
@@ -38,6 +44,7 @@ export default function ActiveWorkoutScreen() {
   const [pendingRightWeight, setPendingRightWeight] = useState('')
   const [showSetModal, setShowSetModal] = useState(false)
   const [pendingActiveDuration, setPendingActiveDuration] = useState(0)
+  const [editDuration, setEditDuration] = useState('')
   const [loading, setLoading] = useState(true)
   const [history, setHistory] = useState<Record<string, ExerciseHistory>>({})
   const historyCache = useRef<Record<string, ExerciseHistory>>({})
@@ -137,7 +144,31 @@ export default function ActiveWorkoutScreen() {
     const setNumber = existingForExercise.length + 1
     const restDuration = restDefault - restSeconds
 
-    if (activeExercise.bilateral) {
+    if (activeExercise.timed) {
+      const weight = parseFloat(pendingWeight) || 0
+      const kcal = fitnessProfile
+        ? calculateSetKcal(
+            1,
+            weight,
+            pendingActiveDuration,
+            fitnessProfile.userMetFactor,
+            fitnessProfile.bodyWeightKg,
+          )
+        : undefined
+
+      const newSet = await logSet(uid, date, {
+        exerciseId: activeExercise.id,
+        exerciseName: activeExercise.name,
+        setNumber,
+        isTimed: true,
+        weight: weight > 0 ? weight : undefined,
+        activeDuration: pendingActiveDuration,
+        restDuration,
+        kcal,
+        createdAt: new Date(),
+      })
+      setSets(prev => [...prev, newSet])
+    } else if (activeExercise.bilateral) {
       const lReps = parseInt(pendingLeftReps)
       const lWeight = parseFloat(pendingLeftWeight)
       const rReps = parseInt(pendingRightReps)
@@ -209,6 +240,9 @@ export default function ActiveWorkoutScreen() {
       setEditLeftWeight(String(set.sides.left.weight))
       setEditRightReps(String(set.sides.right.reps))
       setEditRightWeight(String(set.sides.right.weight))
+    } else if (set.isTimed) {
+      setEditDuration(String(set.activeDuration))
+      setEditWeight(String(set.weight ?? ''))
     } else {
       setEditReps(String(set.reps ?? ''))
       setEditWeight(String(set.weight ?? ''))
@@ -226,6 +260,12 @@ export default function ActiveWorkoutScreen() {
       const sides = { left: { reps: lReps, weight: lWeight }, right: { reps: rReps, weight: rWeight } }
       await updateSet(uid, date, editingSet.id, { sides })
       setSets(prev => prev.map(s => s.id === editingSet.id ? { ...s, sides } : s))
+    } else if (editingSet.isTimed) {
+      const duration = parseInt(editDuration)
+      if (isNaN(duration) || duration <= 0) return
+      const weight = parseFloat(editWeight) || 0
+      await updateSet(uid, date, editingSet.id, { isTimed: true, activeDuration: duration, weight: weight > 0 ? weight : undefined })
+      setSets(prev => prev.map(s => s.id === editingSet.id ? { ...s, activeDuration: duration, weight: weight > 0 ? weight : undefined } : s))
     } else {
       const reps = parseInt(editReps)
       const weight = parseFloat(editWeight)
@@ -319,6 +359,13 @@ export default function ActiveWorkoutScreen() {
                     <span className="text-acid font-bold">{s.sides.right.weight}</span>
                     <span className="text-iron-500">{weightUnit}</span>
                   </>
+                ) : s.isTimed ? (
+                  <>
+                    <span className="text-acid font-bold">{fmtSecs(s.activeDuration)}</span>
+                    {s.weight !== undefined && s.weight > 0 && (
+                      <><span className="text-iron-500"> · </span><span className="text-acid font-bold">{s.weight}</span><span className="text-iron-500">{weightUnit}</span></>
+                    )}
+                  </>
                 ) : (
                   <>
                     <span className="text-white font-bold">{s.reps}</span>
@@ -403,7 +450,31 @@ export default function ActiveWorkoutScreen() {
                 <h2 className="font-display text-3xl text-white">EDIT SET</h2>
                 <span className="font-mono text-iron-400 text-xs">#{editingSet.setNumber}</span>
               </div>
-              {editingSet.sides ? (
+              {editingSet.isTimed ? (
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1">
+                    <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Duration (sec)</label>
+                    <input
+                      type="number"
+                      className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                      value={editDuration}
+                      onChange={e => setEditDuration(e.target.value)}
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Weight ({weightUnit})</label>
+                    <input
+                      type="number"
+                      className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                      placeholder="0"
+                      value={editWeight}
+                      onChange={e => setEditWeight(e.target.value)}
+                      inputMode="decimal"
+                    />
+                  </div>
+                </div>
+              ) : editingSet.sides ? (
                 <div className="flex gap-3 mb-4">
                   <div className="flex-1">
                     <p className="font-mono text-[10px] text-acid uppercase tracking-widest mb-2">L SIDE</p>
@@ -502,7 +573,9 @@ export default function ActiveWorkoutScreen() {
               <p className="font-mono text-iron-400 text-xs mb-4">
                 {confirmDeleteSet.sides
                   ? `Set #${confirmDeleteSet.setNumber} · L ${confirmDeleteSet.sides.left.reps}×${confirmDeleteSet.sides.left.weight}${weightUnit} / R ${confirmDeleteSet.sides.right.reps}×${confirmDeleteSet.sides.right.weight}${weightUnit}`
-                  : `Set #${confirmDeleteSet.setNumber} · ${confirmDeleteSet.reps} reps · ${confirmDeleteSet.weight}${weightUnit}`
+                  : confirmDeleteSet.isTimed
+                    ? `Set #${confirmDeleteSet.setNumber} · ${fmtSecs(confirmDeleteSet.activeDuration)}${confirmDeleteSet.weight ? ` · ${confirmDeleteSet.weight}${weightUnit}` : ''}`
+                    : `Set #${confirmDeleteSet.setNumber} · ${confirmDeleteSet.reps} reps · ${confirmDeleteSet.weight}${weightUnit}`
                 }
               </p>
               <p className="font-sans text-iron-300 text-sm mb-5">This cannot be undone.</p>
@@ -529,7 +602,7 @@ export default function ActiveWorkoutScreen() {
                 <span className="font-mono text-iron-400 text-xs">{pendingActiveDuration}s active</span>
               </div>
 
-              {/* Weight quick-picks */}
+              {/* Weight quick-picks — shown for standard and timed (not bilateral) */}
               {!activeExercise?.bilateral && activeHistory && activeHistory.recentWeights.length > 0 && (
                 <div className="mb-4">
                   <p className="font-mono text-[9px] uppercase tracking-widest text-iron-500 mb-2">Recent weights</p>
@@ -552,7 +625,27 @@ export default function ActiveWorkoutScreen() {
                 </div>
               )}
 
-              {activeExercise?.bilateral ? (
+              {activeExercise?.timed ? (
+                <div className="flex gap-3 mb-4">
+                  <div className="flex-1">
+                    <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Duration</label>
+                    <div className="w-full bg-iron-800 border border-iron-700 px-4 py-3 text-acid text-center font-mono text-2xl font-bold">
+                      {fmtSecs(pendingActiveDuration)}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="font-mono text-[10px] text-iron-400 uppercase tracking-widest block mb-2">Weight ({weightUnit})</label>
+                    <input
+                      type="number"
+                      className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white text-center font-mono text-2xl font-bold outline-none focus:border-acid transition-colors"
+                      placeholder="0"
+                      value={pendingWeight}
+                      onChange={e => setPendingWeight(e.target.value)}
+                      inputMode="decimal"
+                    />
+                  </div>
+                </div>
+              ) : activeExercise?.bilateral ? (
                 <div className="flex gap-3 mb-4">
                   <div className="flex-1">
                     <p className="font-mono text-[10px] text-acid uppercase tracking-widest mb-2">L SIDE</p>
