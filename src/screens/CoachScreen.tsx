@@ -26,13 +26,18 @@ function messagesCol(uid: string) {
   return collection(db, 'users', uid, 'coachMessages')
 }
 
+type MessagesCache = { uid: string; messages: ChatMessage[] }
+let _messagesCache: MessagesCache | null = null
+
 export default function CoachScreen() {
   const { user } = useAuth()
   const uid = user!.uid
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const cachedMsgs = _messagesCache?.uid === uid ? _messagesCache.messages : null
+
+  const [messages, setMessages] = useState<ChatMessage[]>(cachedMsgs ?? [])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
-  const [initialLoading, setInitialLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(cachedMsgs === null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -47,6 +52,7 @@ export default function CoachScreen() {
           content: d.data()['content'] as string,
           createdAt: d.data()['createdAt']?.toDate?.() ?? new Date(),
         }))
+        _messagesCache = { uid, messages: loaded }
         setMessages(loaded)
         setInitialLoading(false)
       }
@@ -64,7 +70,11 @@ export default function CoachScreen() {
     const userMsg: ChatMessage = { role: 'user', content: text.trim() }
 
     await addDoc(messagesCol(uid), { ...userMsg, createdAt: serverTimestamp() })
-    setMessages(prev => [...prev, userMsg])
+    setMessages(prev => {
+      const next = [...prev, userMsg]
+      _messagesCache = { uid, messages: next }
+      return next
+    })
     setInput('')
     setSending(true)
 
@@ -80,7 +90,11 @@ export default function CoachScreen() {
       const reply = data.reply ?? 'Something went wrong — try again.'
       const assistantMsg: ChatMessage = { role: 'assistant', content: reply }
       await addDoc(messagesCol(uid), { ...assistantMsg, createdAt: serverTimestamp() })
-      setMessages(prev => [...prev, assistantMsg])
+      setMessages(prev => {
+        const next = [...prev, assistantMsg]
+        _messagesCache = { uid, messages: next }
+        return next
+      })
     } catch {
       const errMsg: ChatMessage = {
         role: 'assistant',
@@ -96,6 +110,7 @@ export default function CoachScreen() {
     if (!confirm('Clear all chat history?')) return
     const snap = await getDocs(messagesCol(uid))
     await Promise.all(snap.docs.map(d => deleteDoc(d.ref)))
+    _messagesCache = { uid, messages: [] }
     setMessages([])
   }
 
@@ -108,7 +123,7 @@ export default function CoachScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-iron-950 flex flex-col">
+    <div className="bg-iron-950 flex flex-col overflow-hidden animate-screen-in" style={{ height: 'calc(100dvh - 5rem)' }}>
       <div className="h-0.5 w-full bg-acid" />
 
       {/* Header */}

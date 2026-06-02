@@ -48,6 +48,11 @@
   }
 }
 
+@keyframes screenFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @layer utilities {
   .scrollbar-none {
     scrollbar-width: none;
@@ -60,5 +65,8 @@
   }
   .pb-nav {
     padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+  .animate-screen-in {
+    animation: screenFadeIn 0.12s ease-out;
   }
 }

@@ -9,14 +9,24 @@ import ExerciseCard from '../components/ExerciseCard'
 
 const EMPTY_FORM = { name: '', category: 'push' as WorkoutType, muscleGroup: '', bilateral: false }
 
+type ExercisesCache = {
+  uid: string
+  activeProgram: WorkoutProgram
+  exercises: Exercise[]
+  templates: Record<string, Template>
+}
+let _exercisesCache: ExercisesCache | null = null
+
 export default function ExercisesScreen() {
   const { user } = useAuth()
   const uid = user!.uid
 
-  const [activeProgram, setActiveProgram] = useState<WorkoutProgram>(PRESET_PROGRAMS[0])
-  const [activeDayKey, setActiveDayKey] = useState(PRESET_PROGRAMS[0].days[0].key)
-  const [exercises, setExercises] = useState<Exercise[]>([])
-  const [templates, setTemplates] = useState<Record<string, Template>>({})
+  const cached = _exercisesCache?.uid === uid ? _exercisesCache : null
+
+  const [activeProgram, setActiveProgram] = useState<WorkoutProgram>(cached?.activeProgram ?? PRESET_PROGRAMS[0])
+  const [activeDayKey, setActiveDayKey] = useState(cached?.activeProgram.days[0].key ?? PRESET_PROGRAMS[0].days[0].key)
+  const [exercises, setExercises] = useState<Exercise[]>(cached?.exercises ?? [])
+  const [templates, setTemplates] = useState<Record<string, Template>>(cached?.templates ?? {})
   const [showModal, setShowModal] = useState(false)
   const [editTarget, setEditTarget] = useState<Exercise | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -24,13 +34,14 @@ export default function ExercisesScreen() {
   useEffect(() => {
     async function load() {
       const [exs, profile] = await Promise.all([getExercises(uid), getProfile(uid)])
-      setExercises(exs)
       const prog = getProgramById(profile?.activeProgramId, profile?.customPrograms)
-      setActiveProgram(prog)
-      setActiveDayKey(prog.days[0].key)
       const loaded = await Promise.all(prog.days.map(d => getTemplate(uid, d.key)))
       const map: Record<string, Template> = {}
       prog.days.forEach((d, i) => { map[d.key] = loaded[i] })
+      _exercisesCache = { uid, activeProgram: prog, exercises: exs, templates: map }
+      setExercises(exs)
+      setActiveProgram(prog)
+      if (!cached) setActiveDayKey(prog.days[0].key)
       setTemplates(map)
     }
     load()

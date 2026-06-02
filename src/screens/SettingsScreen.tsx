@@ -16,6 +16,15 @@ import type {
   PrimaryGoal, WeightUnit, WorkoutProgram, ProgramDay,
 } from '../types'
 
+type SettingsCache = {
+  uid: string
+  userProfile: UserProfile
+  fitnessProfile: FitnessProfile | null
+  customPrograms: WorkoutProgram[]
+  activeProgram: WorkoutProgram
+}
+let _settingsCache: SettingsCache | null = null
+
 type EditingField =
   | 'biologicalSex' | 'age' | 'heightCm' | 'bodyWeightKg'
   | 'fitnessLevel' | 'primaryGoal' | 'bodyFatPct' | null
@@ -32,13 +41,15 @@ const GOAL_LABELS: Record<PrimaryGoal, string> = {
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth()
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [fp, setFp] = useState<FitnessProfile | null>(null)
-  const [activeProgram, setActiveProgram] = useState<WorkoutProgram>(PRESET_PROGRAMS[0])
-  const [customPrograms, setCustomPrograms] = useState<WorkoutProgram[]>([])
+  const cached = user && _settingsCache?.uid === user.uid ? _settingsCache : null
+
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(cached?.userProfile ?? null)
+  const [fp, setFp] = useState<FitnessProfile | null>(cached?.fitnessProfile ?? null)
+  const [activeProgram, setActiveProgram] = useState<WorkoutProgram>(cached?.activeProgram ?? PRESET_PROGRAMS[0])
+  const [customPrograms, setCustomPrograms] = useState<WorkoutProgram[]>(cached?.customPrograms ?? [])
   const [editingField, setEditingField] = useState<EditingField>(null)
   const [tempValue, setTempValue] = useState<string>('')
-  const [restInput, setRestInput] = useState('')
+  const [restInput, setRestInput] = useState(String(cached?.userProfile?.restDefaultSeconds ?? 90))
   const [savedField, setSavedField] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -52,12 +63,16 @@ export default function SettingsScreen() {
     if (!user) return
     Promise.all([getProfile(user.uid), getFitnessProfile(user.uid)]).then(
       ([profile, fitnessProfile]) => {
+        const customs = profile?.customPrograms ?? []
+        const prog = getProgramById(profile?.activeProgramId, customs)
+        if (profile) {
+          _settingsCache = { uid: user.uid, userProfile: profile, fitnessProfile, customPrograms: customs, activeProgram: prog }
+        }
         setUserProfile(profile)
         setFp(fitnessProfile)
         setRestInput(String(profile?.restDefaultSeconds ?? 90))
-        const customs = profile?.customPrograms ?? []
         setCustomPrograms(customs)
-        setActiveProgram(getProgramById(profile?.activeProgramId, customs))
+        setActiveProgram(prog)
       },
     )
   }, [user])

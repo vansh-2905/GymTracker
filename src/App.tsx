@@ -28,7 +28,7 @@ export default function App() {
   if (!user) return <SignInScreen />
 
   return (
-    <Suspense fallback={<Spinner />}>
+    <Suspense fallback={<div className="min-h-screen bg-iron-950" />}>
       {needsOnboarding ? (
         <OnboardingScreen onComplete={completeOnboarding} />
       ) : (

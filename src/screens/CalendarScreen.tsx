@@ -8,6 +8,15 @@ import { getProgramById, PRESET_PROGRAMS } from '../data/programs'
 import { getProjectedDay } from '../utils/rotation'
 import WorkoutSummary from '../components/WorkoutSummary'
 
+type CalendarProfileCache = {
+  uid: string
+  weightUnit: string
+  lastType: string | null
+  lastDate: string | null
+  activeProgram: WorkoutProgram
+}
+let _calendarCache: CalendarProfileCache | null = null
+
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate()
 }
@@ -26,13 +35,15 @@ export default function CalendarScreen() {
   const now = new Date()
   const [viewYear, setViewYear] = useState(now.getFullYear())
   const [viewMonth, setViewMonth] = useState(now.getMonth())
+  const cached = _calendarCache?.uid === uid ? _calendarCache : null
+
   const [workouts, setWorkouts] = useState<Record<string, Workout>>({})
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null)
   const [selectedSets, setSelectedSets] = useState<WorkoutSet[]>([])
-  const [weightUnit, setWeightUnit] = useState('kg')
-  const [lastType, setLastType] = useState<string | null>(null)
-  const [lastDate, setLastDate] = useState<string | null>(null)
-  const [activeProgram, setActiveProgram] = useState<WorkoutProgram>(PRESET_PROGRAMS[0])
+  const [weightUnit, setWeightUnit] = useState(cached?.weightUnit ?? 'kg')
+  const [lastType, setLastType] = useState<string | null>(cached?.lastType ?? null)
+  const [lastDate, setLastDate] = useState<string | null>(cached?.lastDate ?? null)
+  const [activeProgram, setActiveProgram] = useState<WorkoutProgram>(cached?.activeProgram ?? PRESET_PROGRAMS[0])
   const [startModal, setStartModal] = useState<{ date: string; dayKey: string } | null>(null)
 
   useEffect(() => {
@@ -45,10 +56,12 @@ export default function CalendarScreen() {
     })
     getProfile(uid).then(p => {
       if (p) {
+        const prog = getProgramById(p.activeProgramId, p.customPrograms)
+        _calendarCache = { uid, weightUnit: p.weightUnit, lastType: p.lastWorkoutType, lastDate: p.lastWorkoutDate, activeProgram: prog }
         setWeightUnit(p.weightUnit)
         setLastType(p.lastWorkoutType)
         setLastDate(p.lastWorkoutDate)
-        setActiveProgram(getProgramById(p.activeProgramId, p.customPrograms))
+        setActiveProgram(prog)
       }
     })
   }, [uid, viewYear, viewMonth])
