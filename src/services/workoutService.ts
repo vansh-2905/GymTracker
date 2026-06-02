@@ -148,6 +148,7 @@ export async function getRecentExerciseSets(
           reps: data['reps'] !== undefined ? (data['reps'] as number) : undefined,
           weight: data['weight'] !== undefined ? (data['weight'] as number) : undefined,
           sides: data['sides'] as WorkoutSet['sides'] | undefined,
+          isTimed: data['isTimed'] as boolean | undefined,
           activeDuration: data['activeDuration'] as number,
           restDuration: data['restDuration'] as number,
           kcal: data['kcal'] !== undefined ? (data['kcal'] as number) : undefined,

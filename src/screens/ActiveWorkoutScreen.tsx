@@ -362,9 +362,9 @@ export default function ActiveWorkoutScreen() {
                 ) : s.isTimed ? (
                   <>
                     <span className="text-acid font-bold">{fmtSecs(s.activeDuration)}</span>
-                    {s.weight !== undefined && s.weight > 0 && (
-                      <><span className="text-iron-500"> · </span><span className="text-acid font-bold">{s.weight}</span><span className="text-iron-500">{weightUnit}</span></>
-                    )}
+                    <span className="text-iron-500"> hold · </span>
+                    <span className="text-acid font-bold">{s.weight ?? 0}</span>
+                    <span className="text-iron-500">{weightUnit}</span>
                   </>
                 ) : (
                   <>
