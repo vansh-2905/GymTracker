@@ -32,6 +32,19 @@ describe('useTimer', () => {
     expect(result.current.restSeconds).toBeLessThan(0)
   })
 
+  it('recovers true elapsed time after the page was suspended (no ticks fired)', () => {
+    const { result } = renderHook(() => useTimer())
+    act(() => { result.current.startSet() })
+    // Simulate screen lock / backgrounding: wall clock advances 60s but the
+    // browser never fires the interval
+    act(() => { vi.setSystemTime(Date.now() + 60_000) })
+    act(() => { document.dispatchEvent(new Event('visibilitychange')) })
+    expect(result.current.setSeconds).toBe(60)
+    let elapsed = 0
+    act(() => { elapsed = result.current.stopSet() })
+    expect(elapsed).toBe(60)
+  })
+
   it('resetTimers clears both timers to initial state', () => {
     const { result } = renderHook(() => useTimer())
     act(() => { result.current.startSet() })

@@ -6,7 +6,7 @@ import { getProfile } from '../services/profileService'
 import { getProgramById } from '../data/programs'
 import { getTemplate } from '../services/templateService'
 import { getExercises } from '../services/exerciseService'
-import { completeWorkout, getWorkout, getSets, logSet, updateSet, deleteSet, getRecentExerciseSets } from '../services/workoutService'
+import { completeWorkout, getWorkout, getSets, logSet, updateSet, deleteSet, getRecentWorkoutSets } from '../services/workoutService'
 import { getFitnessProfile } from '../services/fitnessProfileService'
 import { calculateSetKcal } from '../utils/calorieCalc'
 import { useTimer } from '../hooks/useTimer'
@@ -48,6 +48,7 @@ export default function ActiveWorkoutScreen() {
   const [loading, setLoading] = useState(true)
   const [history, setHistory] = useState<Record<string, ExerciseHistory>>({})
   const historyCache = useRef<Record<string, ExerciseHistory>>({})
+  const recentSessionsRef = useRef<Promise<{ date: string; sets: WorkoutSet[] }[]> | null>(null)
   const [editingSet, setEditingSet] = useState<WorkoutSet | null>(null)
   const [editReps, setEditReps] = useState('')
   const [editWeight, setEditWeight] = useState('')
@@ -99,7 +100,20 @@ export default function ActiveWorkoutScreen() {
 
   async function loadHistory(exerciseId: string) {
     if (historyCache.current[exerciseId] || !date) return
-    const sessions = await getRecentExerciseSets(uid, exerciseId, date)
+    // All exercises derive their history from one shared fetch of the recent
+    // workouts' sets, instead of re-querying the whole history per exercise.
+    recentSessionsRef.current ??= getRecentWorkoutSets(uid, date)
+    let recent: { date: string; sets: WorkoutSet[] }[]
+    try {
+      recent = await recentSessionsRef.current
+    } catch {
+      recentSessionsRef.current = null
+      return
+    }
+    const sessions = recent
+      .map(session => ({ date: session.date, sets: session.sets.filter(s => s.exerciseId === exerciseId) }))
+      .filter(session => session.sets.length > 0)
+      .slice(0, 3)
     const lastSets = sessions[0]?.sets ?? []
     // Collect recent weights across sessions, deduplicated, most recent first
     const seen = new Set<number>()

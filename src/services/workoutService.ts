@@ -1,6 +1,7 @@
 import {
   doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc,
-  getDocs, query, orderBy, Timestamp
+  getDocs, query, orderBy, where, limit, documentId, Timestamp,
+  type DocumentData
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import type { Workout, WorkoutSet, WorkoutType } from '../types'
@@ -13,17 +14,41 @@ function setsCol(uid: string, date: string) {
   return collection(db, 'users', uid, 'workouts', date, 'sets')
 }
 
+function workoutsCol(uid: string) {
+  return collection(db, 'users', uid, 'workouts')
+}
+
+function mapWorkoutDoc(date: string, data: DocumentData): Workout {
+  return {
+    date,
+    type: data['type'] as WorkoutType,
+    startTime: (data['startTime'] as Timestamp).toDate(),
+    endTime: data['endTime'] ? (data['endTime'] as Timestamp).toDate() : null,
+    completed: data['completed'] as boolean,
+  }
+}
+
+function mapSetDoc(id: string, data: DocumentData): WorkoutSet {
+  return {
+    id,
+    exerciseId: data['exerciseId'] as string,
+    exerciseName: data['exerciseName'] as string,
+    setNumber: data['setNumber'] as number,
+    reps: data['reps'] !== undefined ? (data['reps'] as number) : undefined,
+    weight: data['weight'] !== undefined ? (data['weight'] as number) : undefined,
+    sides: data['sides'] as WorkoutSet['sides'] | undefined,
+    isTimed: data['isTimed'] as boolean | undefined,
+    activeDuration: data['activeDuration'] as number,
+    restDuration: data['restDuration'] as number,
+    kcal: data['kcal'] !== undefined ? (data['kcal'] as number) : undefined,
+    createdAt: (data['createdAt'] as Timestamp).toDate(),
+  } as WorkoutSet
+}
+
 export async function getWorkout(uid: string, date: string): Promise<Workout | null> {
   const snap = await getDoc(workoutRef(uid, date))
   if (!snap.exists()) return null
-  const d = snap.data()
-  return {
-    date,
-    type: d['type'] as WorkoutType,
-    startTime: (d['startTime'] as Timestamp).toDate(),
-    endTime: d['endTime'] ? (d['endTime'] as Timestamp).toDate() : null,
-    completed: d['completed'] as boolean,
-  }
+  return mapWorkoutDoc(date, snap.data())
 }
 
 export async function startWorkout(uid: string, date: string, type: WorkoutType): Promise<Workout> {
@@ -55,23 +80,7 @@ export async function logSet(uid: string, date: string, set: Omit<WorkoutSet, 'i
 export async function getSets(uid: string, date: string): Promise<WorkoutSet[]> {
   const q = query(setsCol(uid, date), orderBy('createdAt'))
   const snap = await getDocs(q)
-  return snap.docs.map(d => {
-    const data = d.data()
-    return {
-      id: d.id,
-      exerciseId: data['exerciseId'] as string,
-      exerciseName: data['exerciseName'] as string,
-      setNumber: data['setNumber'] as number,
-      reps: data['reps'] !== undefined ? (data['reps'] as number) : undefined,
-      weight: data['weight'] !== undefined ? (data['weight'] as number) : undefined,
-      sides: data['sides'] as WorkoutSet['sides'] | undefined,
-      isTimed: data['isTimed'] as boolean | undefined,
-      activeDuration: data['activeDuration'] as number,
-      restDuration: data['restDuration'] as number,
-      kcal: data['kcal'] !== undefined ? (data['kcal'] as number) : undefined,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-    } as WorkoutSet
-  })
+  return snap.docs.map(d => mapSetDoc(d.id, d.data()))
 }
 
 export async function getWorkoutsInRange(
@@ -79,25 +88,17 @@ export async function getWorkoutsInRange(
   startDate: string,
   endDate: string,
 ): Promise<Workout[]> {
-  const col = collection(db, 'users', uid, 'workouts')
-  const snap = await getDocs(col)
-  return snap.docs
-    .filter(d => d.id >= startDate && d.id <= endDate)
-    .map(d => {
-      const data = d.data()
-      return {
-        date: d.id,
-        type: data['type'] as WorkoutType,
-        startTime: (data['startTime'] as Timestamp).toDate(),
-        endTime: data['endTime'] ? (data['endTime'] as Timestamp).toDate() : null,
-        completed: data['completed'] as boolean,
-      } as Workout
-    })
-    .sort((a, b) => a.date.localeCompare(b.date))
+  // Workout doc IDs are YYYY-MM-DD dates, so a documentId range query fetches
+  // only the requested window instead of the user's entire history.
+  const q = query(
+    workoutsCol(uid),
+    where(documentId(), '>=', startDate),
+    where(documentId(), '<=', endDate),
+  )
+  const snap = await getDocs(q)
+  return snap.docs.map(d => mapWorkoutDoc(d.id, d.data()))
 }
 
-// Returns sets for a given exercise from the most recent past workouts (up to 5 workouts back).
-// Results are sorted most-recent-first so callers can easily extract last session and recent weights.
 export async function updateSet(
   uid: string,
   date: string,
@@ -120,44 +121,23 @@ export async function deleteWorkout(uid: string, date: string): Promise<void> {
   await deleteDoc(workoutRef(uid, date))
 }
 
-export async function getRecentExerciseSets(
+// Returns all sets of the most recent `workoutCount` workouts before `beforeDate`,
+// most recent first. Fetched with one limited query for the dates plus parallel
+// set reads, so callers can derive per-exercise history from a single fetch
+// instead of re-querying the whole history for every exercise.
+export async function getRecentWorkoutSets(
   uid: string,
-  exerciseId: string,
   beforeDate: string,
+  workoutCount = 10,
 ): Promise<{ date: string; sets: WorkoutSet[] }[]> {
-  const col = collection(db, 'users', uid, 'workouts')
-  const snap = await getDocs(col)
-  const pastDates = snap.docs
-    .map(d => d.id)
-    .filter(d => d < beforeDate)
-    .sort((a, b) => b.localeCompare(a))
-    .slice(0, 10)
-
-  const results: { date: string; sets: WorkoutSet[] }[] = []
-  for (const date of pastDates) {
-    const q = query(setsCol(uid, date), orderBy('createdAt'))
-    const sSnap = await getDocs(q)
-    const matched = sSnap.docs
-      .map(d => {
-        const data = d.data()
-        return {
-          id: d.id,
-          exerciseId: data['exerciseId'] as string,
-          exerciseName: data['exerciseName'] as string,
-          setNumber: data['setNumber'] as number,
-          reps: data['reps'] !== undefined ? (data['reps'] as number) : undefined,
-          weight: data['weight'] !== undefined ? (data['weight'] as number) : undefined,
-          sides: data['sides'] as WorkoutSet['sides'] | undefined,
-          isTimed: data['isTimed'] as boolean | undefined,
-          activeDuration: data['activeDuration'] as number,
-          restDuration: data['restDuration'] as number,
-          kcal: data['kcal'] !== undefined ? (data['kcal'] as number) : undefined,
-          createdAt: (data['createdAt'] as Timestamp).toDate(),
-        } as WorkoutSet
-      })
-      .filter(s => s.exerciseId === exerciseId)
-    if (matched.length > 0) results.push({ date, sets: matched })
-    if (results.length >= 3) break
-  }
-  return results
+  const dq = query(
+    workoutsCol(uid),
+    where(documentId(), '<', beforeDate),
+    orderBy(documentId(), 'desc'),
+    limit(workoutCount),
+  )
+  const snap = await getDocs(dq)
+  const dates = snap.docs.map(d => d.id)
+  const setsPerDate = await Promise.all(dates.map(d => getSets(uid, d)))
+  return dates.map((date, i) => ({ date, sets: setsPerDate[i] }))
 }
