@@ -11,6 +11,8 @@ import { getFitnessProfile, saveFitnessProfile } from '../services/fitnessProfil
 import { computeUserMetFactor } from '../utils/calorieCalc'
 import { getProgramById, PRESET_PROGRAMS, CUSTOM_PALETTE, makeDayKey } from '../data/programs'
 import { seedProgramExercises } from '../utils/programExercises'
+import LegalModal from '../components/LegalModal'
+import { PRIVACY_POLICY, TERMS_OF_USE, type LegalDoc } from '../data/legal'
 import type {
   UserProfile, FitnessProfile, BiologicalSex, FitnessLevel,
   PrimaryGoal, WeightUnit, WorkoutProgram, ProgramDay,
@@ -52,6 +54,7 @@ export default function SettingsScreen() {
   const [restInput, setRestInput] = useState(String(cached?.userProfile?.restDefaultSeconds ?? 90))
   const [savedField, setSavedField] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null)
 
   // Program picker state
   const [showProgramPicker, setShowProgramPicker] = useState(false)
@@ -363,6 +366,25 @@ export default function SettingsScreen() {
         </div>
       )}
 
+      {/* Legal */}
+      <div className="mx-5 mb-4">
+        <p className="font-mono text-[10px] uppercase tracking-widest text-iron-400 mb-2">Legal</p>
+        <div className="bg-iron-900 border border-iron-700">
+          <button
+            onClick={() => setLegalDoc(TERMS_OF_USE)}
+            className="w-full px-4 py-3 font-mono text-[11px] uppercase tracking-widest text-white text-left border-b border-iron-700 active:bg-iron-800"
+          >
+            Terms of Use
+          </button>
+          <button
+            onClick={() => setLegalDoc(PRIVACY_POLICY)}
+            className="w-full px-4 py-3 font-mono text-[11px] uppercase tracking-widest text-white text-left active:bg-iron-800"
+          >
+            Privacy Policy
+          </button>
+        </div>
+      </div>
+
       {/* Account */}
       <div className="mx-5 mb-4">
         <p className="font-mono text-[10px] uppercase tracking-widest text-iron-400 mb-2">Account</p>
@@ -384,6 +406,8 @@ export default function SettingsScreen() {
           </button>
         </div>
       </div>
+
+      {legalDoc && <LegalModal doc={legalDoc} onClose={() => setLegalDoc(null)} />}
 
       {/* Calorie profile bottom-sheet modal */}
       {editingField !== null && fp && (

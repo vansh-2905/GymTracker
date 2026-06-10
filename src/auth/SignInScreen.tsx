@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import { useAuth } from './AuthContext'
+import LegalModal from '../components/LegalModal'
+import { PRIVACY_POLICY, TERMS_OF_USE, type LegalDoc } from '../data/legal'
 
 export default function SignInScreen() {
   const { signIn } = useAuth()
+  const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null)
 
   return (
     <div className="min-h-screen bg-iron-950 flex flex-col relative overflow-hidden">
@@ -50,10 +54,22 @@ export default function SignInScreen() {
           Continue with Google
         </button>
 
-        <p className="text-iron-600 text-[10px] text-center mt-5 font-mono tracking-widest uppercase">
+        <p className="text-iron-500 text-[10px] text-center mt-5 font-mono tracking-wider uppercase leading-relaxed">
+          By continuing you agree to the{' '}
+          <button onClick={() => setLegalDoc(TERMS_OF_USE)} className="underline text-iron-300">
+            Terms of Use
+          </button>
+          {' '}and{' '}
+          <button onClick={() => setLegalDoc(PRIVACY_POLICY)} className="underline text-iron-300">
+            Privacy Policy
+          </button>
+        </p>
+        <p className="text-iron-600 text-[10px] text-center mt-2 font-mono tracking-widest uppercase">
           Your data stays yours
         </p>
       </div>
+
+      {legalDoc && <LegalModal doc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </div>
   )
 }
