@@ -72,7 +72,8 @@ export default function ActiveWorkoutScreen() {
         getSets(uid, date!),
         getFitnessProfile(uid),
       ])
-      setFitnessProfile(fp)
+      // No calorie estimates without a consented fitness profile
+      setFitnessProfile(fp && !fp.skipped ? fp : null)
       const unit = profile?.weightUnit ?? 'kg'
       setRestDefault(profile?.restDefaultSeconds ?? 90)
       setWeightUnit(unit)

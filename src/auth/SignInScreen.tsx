@@ -55,7 +55,7 @@ export default function SignInScreen() {
         </button>
 
         <p className="text-iron-500 text-[10px] text-center mt-5 font-mono tracking-wider uppercase leading-relaxed">
-          By continuing you agree to the{' '}
+          You'll be asked to review the{' '}
           <button onClick={() => setLegalDoc(TERMS_OF_USE)} className="underline text-iron-300">
             Terms of Use
           </button>

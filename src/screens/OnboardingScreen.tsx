@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { saveFitnessProfile } from '../services/fitnessProfileService'
-import { setActiveProgramId } from '../services/profileService'
+import { setActiveProgramId, recordConsent } from '../services/profileService'
+import { LEGAL_VERSION } from '../data/legal'
 import { computeUserMetFactor } from '../utils/calorieCalc'
 import { PRESET_PROGRAMS, getProgramById } from '../data/programs'
 import { seedProgramExercises } from '../utils/programExercises'
@@ -65,6 +66,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
   const [fitnessLevel, setFitnessLevel] = useState<FitnessLevel | null>(null)
   const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoal | null>(null)
   const [bodyFatPct, setBodyFatPct] = useState<string | null>(null)
+  const [healthConsent, setHealthConsent] = useState(false)
 
   function resolvedHeightCm(): number {
     if (heightUnit === 'cm') return parseFloat(heightCm) || DEFAULTS.heightCm
@@ -117,6 +119,9 @@ export default function OnboardingScreen({ onComplete }: Props) {
         skipped,
         completedAt: todayStr(),
       })
+      if (!skipped) {
+        await recordConsent(user!.uid, 'healthProfile', LEGAL_VERSION)
+      }
       await setActiveProgramId(user!.uid, selectedProgramId)
       seedProgramExercises(user!.uid, getProgramById(selectedProgramId, [])) // fire-and-forget
       onComplete()
@@ -398,14 +403,38 @@ export default function OnboardingScreen({ onComplete }: Props) {
             CONTINUE
           </button>
         ) : (
-          <button
-            onClick={() => handleFinish(false)}
-            disabled={saving}
-            className="w-full py-4 bg-acid text-black font-sans font-bold uppercase disabled:opacity-50 transition-opacity"
-            style={{ letterSpacing: '0.12em' }}
-          >
-            {saving ? 'SAVING…' : 'FINISH'}
-          </button>
+          <>
+            <button
+              onClick={() => setHealthConsent(c => !c)}
+              className="w-full flex items-start gap-3 text-left mb-4"
+            >
+              <span
+                className={`w-5 h-5 mt-0.5 flex-shrink-0 border flex items-center justify-center transition-colors ${
+                  healthConsent ? 'bg-acid border-acid' : 'border-iron-500 bg-transparent'
+                }`}
+              >
+                {healthConsent && (
+                  <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </span>
+              <span className="font-sans text-iron-300 text-xs leading-relaxed">
+                I consent to GymTracker using this information to estimate calories burned.
+              </span>
+            </button>
+            <button
+              onClick={() => handleFinish(false)}
+              disabled={saving || !healthConsent}
+              className="w-full py-4 bg-acid text-black font-sans font-bold uppercase disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+              style={{ letterSpacing: '0.12em' }}
+            >
+              {saving ? 'SAVING…' : 'FINISH'}
+            </button>
+            <p className="font-mono text-iron-500 text-[9px] uppercase tracking-widest text-center mt-3">
+              Prefer not to? Use Skip above — everything works, just no calorie estimates
+            </p>
+          </>
         )}
       </div>
     </div>
