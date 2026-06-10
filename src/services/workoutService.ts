@@ -111,6 +111,15 @@ export async function updateSet(
   await updateDoc(doc(setsCol(uid, date), setId), updates)
 }
 
+export async function updateSetKcal(uid: string, date: string, setId: string, kcal: number): Promise<void> {
+  await updateDoc(doc(setsCol(uid, date), setId), { kcal })
+}
+
+export async function getAllWorkoutDates(uid: string): Promise<string[]> {
+  const snap = await getDocs(workoutsCol(uid))
+  return snap.docs.map(d => d.id)
+}
+
 export async function deleteSet(uid: string, date: string, setId: string): Promise<void> {
   await deleteDoc(doc(setsCol(uid, date), setId))
 }

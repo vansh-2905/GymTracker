@@ -39,6 +39,10 @@ export async function updateRestDefault(uid: string, seconds: number): Promise<v
   await updateDoc(profileRef(uid), { restDefaultSeconds: seconds })
 }
 
+export async function markKcalRestRecalcDone(uid: string): Promise<void> {
+  await setDoc(profileRef(uid), { kcalRestRecalcDone: true }, { merge: true })
+}
+
 // Uses setDoc+merge so it works even if profile doc doesn't exist yet (onboarding)
 export async function setActiveProgramId(uid: string, programId: string): Promise<void> {
   await setDoc(

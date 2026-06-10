@@ -33,40 +33,53 @@ describe('computeUserMetFactor', () => {
 })
 
 describe('calculateSetKcal', () => {
-  it('returns 0 for zero activeDuration', () => {
-    expect(calculateSetKcal(10, 60, 0, 1.0, 80)).toBe(0)
+  it('returns 0 for zero activeDuration, even with rest time', () => {
+    expect(calculateSetKcal(10, 60, 0, 90, 1.0, 80)).toBe(0)
   })
   it('uses bodyweight MET (4.0) when weight is 0', () => {
     // 4.0 * 1.0 * 80 * (60/3600) * 1.15 ≈ 6.1
-    expect(calculateSetKcal(10, 0, 60, 1.0, 80)).toBeCloseTo(6.1, 0)
+    expect(calculateSetKcal(10, 0, 60, 0, 1.0, 80)).toBeCloseTo(6.1, 0)
   })
   it('uses heavy MET (6.0) for 1–6 reps', () => {
     // 6.0 * 1.0 * 80 * (60/3600) * 1.15 ≈ 9.2
-    expect(calculateSetKcal(5, 100, 60, 1.0, 80)).toBeCloseTo(9.2, 0)
+    expect(calculateSetKcal(5, 100, 60, 0, 1.0, 80)).toBeCloseTo(9.2, 0)
   })
   it('uses heavy MET (6.0) for exactly 6 reps', () => {
-    expect(calculateSetKcal(6, 100, 60, 1.0, 80)).toBeCloseTo(9.2, 0)
+    expect(calculateSetKcal(6, 100, 60, 0, 1.0, 80)).toBeCloseTo(9.2, 0)
   })
   it('uses moderate MET (5.0) for 7–12 reps', () => {
     // 5.0 * 1.0 * 80 * (60/3600) * 1.15 ≈ 7.7
-    expect(calculateSetKcal(10, 60, 60, 1.0, 80)).toBeCloseTo(7.7, 0)
+    expect(calculateSetKcal(10, 60, 60, 0, 1.0, 80)).toBeCloseTo(7.7, 0)
   })
   it('uses light MET (3.5) for 13+ reps', () => {
     // 3.5 * 1.0 * 80 * (60/3600) * 1.15 ≈ 5.4
-    expect(calculateSetKcal(15, 40, 60, 1.0, 80)).toBeCloseTo(5.4, 0)
+    expect(calculateSetKcal(15, 40, 60, 0, 1.0, 80)).toBeCloseTo(5.4, 0)
+  })
+  it('counts rest time at the rest MET (2.5)', () => {
+    // active: 5.0 * (60/3600), rest: 2.5 * (90/3600) → (0.0833 + 0.0625) * 80 * 1.15 ≈ 13.4
+    expect(calculateSetKcal(10, 60, 60, 90, 1.0, 80)).toBeCloseTo(13.4, 0)
+  })
+  it('rest contribution is additive on top of the active-only value', () => {
+    const activeOnly = calculateSetKcal(10, 60, 60, 0, 1.0, 80)
+    const withRest = calculateSetKcal(10, 60, 60, 90, 1.0, 80)
+    // 2.5 * 1.0 * 80 * (90/3600) * 1.15 ≈ 5.75
+    expect(withRest - activeOnly).toBeCloseTo(5.8, 0)
+  })
+  it('ignores negative restDuration', () => {
+    expect(calculateSetKcal(10, 60, 60, -30, 1.0, 80)).toBe(calculateSetKcal(10, 60, 60, 0, 1.0, 80))
   })
   it('scales linearly with bodyWeightKg', () => {
-    const light = calculateSetKcal(10, 60, 60, 1.0, 60)
-    const heavy = calculateSetKcal(10, 60, 60, 1.0, 90)
+    const light = calculateSetKcal(10, 60, 60, 0, 1.0, 60)
+    const heavy = calculateSetKcal(10, 60, 60, 0, 1.0, 90)
     expect(heavy / light).toBeCloseTo(90 / 60, 1)
   })
   it('scales linearly with activeDuration', () => {
-    const short = calculateSetKcal(10, 60, 30, 1.0, 80)
-    const long = calculateSetKcal(10, 60, 60, 1.0, 80)
+    const short = calculateSetKcal(10, 60, 30, 0, 1.0, 80)
+    const long = calculateSetKcal(10, 60, 60, 0, 1.0, 80)
     expect(long / short).toBeCloseTo(2, 1)
   })
   it('rounds result to 1 decimal place', () => {
-    const result = calculateSetKcal(10, 60, 61, 1.0, 80)
+    const result = calculateSetKcal(10, 60, 61, 0, 1.0, 80)
     const asString = result.toString()
     expect(asString).toMatch(/^\d+(\.\d)?$/)
   })

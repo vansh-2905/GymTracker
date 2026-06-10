@@ -8,6 +8,12 @@ const FITNESS_FACTORS: Record<FitnessLevel, number> = {
   athlete: 0.85,
 }
 
+// MET values for resistance training are defined as whole-session averages
+// including inter-set rest, so rest time must be counted too — at a lower
+// rate, since heart rate and oxygen uptake stay elevated between sets but
+// below working levels.
+const REST_MET = 2.5
+
 export function computeUserMetFactor(
   biologicalSex: BiologicalSex,
   age: number,
@@ -22,11 +28,14 @@ export function calculateSetKcal(
   reps: number,
   weight: number,
   activeDuration: number,
+  restDuration: number,
   userMetFactor: number,
   bodyWeightKg: number,
 ): number {
   if (activeDuration === 0) return 0
   const baseMET = weight === 0 ? 4.0 : reps <= 6 ? 6.0 : reps <= 12 ? 5.0 : 3.5
-  const raw = baseMET * userMetFactor * bodyWeightKg * (activeDuration / 3600) * 1.15
+  const activeHours = activeDuration / 3600
+  const restHours = Math.max(0, restDuration) / 3600
+  const raw = (baseMET * activeHours + REST_MET * restHours) * userMetFactor * bodyWeightKg * 1.15
   return Math.round(raw * 10) / 10
 }

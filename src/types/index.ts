@@ -25,6 +25,8 @@ export interface UserProfile {
   restDefaultSeconds?: number
   activeProgramId?: string
   customPrograms?: WorkoutProgram[]
+  /** Set once historical set kcal values have been recalculated to include rest time. */
+  kcalRestRecalcDone?: boolean
 }
 
 export interface FitnessProfile {

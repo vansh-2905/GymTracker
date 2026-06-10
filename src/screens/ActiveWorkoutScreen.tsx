@@ -165,6 +165,7 @@ export default function ActiveWorkoutScreen() {
             1,
             weight,
             pendingActiveDuration,
+            restDuration,
             fitnessProfile.userMetFactor,
             fitnessProfile.bodyWeightKg,
           )
@@ -194,6 +195,7 @@ export default function ActiveWorkoutScreen() {
             lReps + rReps,
             (lWeight + rWeight) / 2,
             pendingActiveDuration,
+            restDuration,
             fitnessProfile.userMetFactor,
             fitnessProfile.bodyWeightKg,
           )
@@ -220,6 +222,7 @@ export default function ActiveWorkoutScreen() {
             reps,
             weight,
             pendingActiveDuration,
+            restDuration,
             fitnessProfile.userMetFactor,
             fitnessProfile.bodyWeightKg,
           )

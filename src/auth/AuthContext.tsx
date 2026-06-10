@@ -27,6 +27,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { getFitnessProfile } = await import('../services/fitnessProfileService')
         const fp = await getFitnessProfile(u.uid)
         setNeedsOnboarding(!fp)
+        if (fp) {
+          // One-time backfill of stored kcal values; runs in the background
+          import('../utils/kcalMigration')
+            .then(({ recalculateAllSetKcal }) => recalculateAllSetKcal(u.uid))
+            .catch(err => console.error('kcal recalculation failed', err))
+        }
       } else {
         setNeedsOnboarding(false)
       }
