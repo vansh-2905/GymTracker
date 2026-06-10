@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import { useAuth } from './auth/AuthContext'
 import SignInScreen from './auth/SignInScreen'
+import ConsentScreen from './auth/ConsentScreen'
 import BottomNav from './components/BottomNav'
 
 const TodayScreen = lazy(() => import('./screens/TodayScreen'))
@@ -21,11 +22,13 @@ function Spinner() {
 }
 
 export default function App() {
-  const { user, loading, needsOnboarding, completeOnboarding } = useAuth()
+  const { user, loading, needsConsent, needsOnboarding, completeOnboarding } = useAuth()
 
   if (loading) return <Spinner />
 
   if (!user) return <SignInScreen />
+
+  if (needsConsent) return <ConsentScreen />
 
   return (
     <Suspense fallback={<div className="min-h-screen bg-iron-950" />}>

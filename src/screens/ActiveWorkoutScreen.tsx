@@ -72,7 +72,8 @@ export default function ActiveWorkoutScreen() {
         getSets(uid, date!),
         getFitnessProfile(uid),
       ])
-      setFitnessProfile(fp)
+      // No calorie estimates without a consented fitness profile
+      setFitnessProfile(fp && !fp.skipped ? fp : null)
       const unit = profile?.weightUnit ?? 'kg'
       setRestDefault(profile?.restDefaultSeconds ?? 90)
       setWeightUnit(unit)
@@ -165,6 +166,7 @@ export default function ActiveWorkoutScreen() {
             1,
             weight,
             pendingActiveDuration,
+            restDuration,
             fitnessProfile.userMetFactor,
             fitnessProfile.bodyWeightKg,
           )
@@ -194,6 +196,7 @@ export default function ActiveWorkoutScreen() {
             lReps + rReps,
             (lWeight + rWeight) / 2,
             pendingActiveDuration,
+            restDuration,
             fitnessProfile.userMetFactor,
             fitnessProfile.bodyWeightKg,
           )
@@ -220,6 +223,7 @@ export default function ActiveWorkoutScreen() {
             reps,
             weight,
             pendingActiveDuration,
+            restDuration,
             fitnessProfile.userMetFactor,
             fitnessProfile.bodyWeightKg,
           )

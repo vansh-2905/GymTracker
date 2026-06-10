@@ -18,6 +18,12 @@ export interface WorkoutProgram {
   isPreset: boolean
 }
 
+/** acceptedAt is a Firestore server timestamp (Timestamp on read). */
+export interface ConsentRecord {
+  version: string
+  acceptedAt: unknown
+}
+
 export interface UserProfile {
   lastWorkoutType: WorkoutType | null
   lastWorkoutDate: string | null
@@ -25,6 +31,12 @@ export interface UserProfile {
   restDefaultSeconds?: number
   activeProgramId?: string
   customPrograms?: WorkoutProgram[]
+  /** Set once historical set kcal values have been recalculated to include rest time. */
+  kcalRestRecalcDone?: boolean
+  consents?: {
+    termsAndPrivacy?: ConsentRecord
+    healthProfile?: ConsentRecord
+  }
 }
 
 export interface FitnessProfile {
