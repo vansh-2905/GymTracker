@@ -7,7 +7,7 @@ import { getProfile } from '../services/profileService'
 import { getProgramById, PRESET_PROGRAMS } from '../data/programs'
 import ExerciseCard from '../components/ExerciseCard'
 
-const EMPTY_FORM = { name: '', category: 'push' as WorkoutType, muscleGroup: '', bilateral: false, timed: false }
+const EMPTY_FORM = { name: '', categories: ['push'] as WorkoutType[], muscleGroup: '', bilateral: false, timed: false }
 
 type ExercisesCache = {
   uid: string
@@ -52,13 +52,13 @@ export default function ExercisesScreen() {
   const activeDayColor = activeDayObj.color
   // Show exercises for this day: those categorized by the day key + any already in the template
   const displayExercises = exercises.filter(
-    e => e.category === activeDayKey || currentTemplate.exerciseIds.includes(e.id)
+    e => e.categories.includes(activeDayKey) || currentTemplate.exerciseIds.includes(e.id)
   )
-  const formDayColor = activeProgram.days.find(d => d.key === form.category)?.color ?? activeDayColor
+  const formDayColor = activeProgram.days.find(d => form.categories.includes(d.key))?.color ?? activeDayColor
 
   const openAdd = () => {
     setEditTarget(null)
-    setForm({ ...EMPTY_FORM, category: activeDayKey })
+    setForm({ ...EMPTY_FORM, categories: [activeDayKey] })
     setShowModal(true)
   }
 
@@ -66,7 +66,7 @@ export default function ExercisesScreen() {
     setEditTarget(exercise)
     setForm({
       name: exercise.name,
-      category: exercise.category,
+      categories: [...exercise.categories],
       muscleGroup: exercise.muscleGroup,
       bilateral: exercise.bilateral ?? false,
       timed: exercise.timed ?? false,
@@ -75,7 +75,7 @@ export default function ExercisesScreen() {
   }
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.muscleGroup.trim()) return
+    if (!form.name.trim() || !form.muscleGroup.trim() || form.categories.length === 0) return
     const exerciseData = {
       ...form,
       bilateral: form.bilateral && !form.timed,
@@ -231,21 +231,34 @@ export default function ExercisesScreen() {
                 })}
               </div>
 
-              <div className="flex border border-iron-700">
-                {activeProgram.days.map((d, i) => (
-                  <button
-                    key={d.key}
-                    onClick={() => setForm(f => ({ ...f, category: d.key }))}
-                    className="flex-1 py-3 font-mono text-xs uppercase tracking-wider transition-colors"
-                    style={{
-                      backgroundColor: form.category === d.key ? d.color + '20' : 'transparent',
-                      color: form.category === d.key ? d.color : '#555',
-                      borderRight: i < activeProgram.days.length - 1 ? '1px solid #222' : 'none',
-                    }}
-                  >
-                    {d.label}
-                  </button>
-                ))}
+              <div>
+                <p className="font-mono text-iron-500 text-[10px] uppercase tracking-widest mb-2">
+                  Workout days — select one or more
+                </p>
+                <div className="flex border border-iron-700">
+                  {activeProgram.days.map((d, i) => {
+                    const selected = form.categories.includes(d.key)
+                    return (
+                      <button
+                        key={d.key}
+                        onClick={() => setForm(f => ({
+                          ...f,
+                          categories: selected
+                            ? f.categories.filter(k => k !== d.key)
+                            : [...f.categories, d.key],
+                        }))}
+                        className="flex-1 py-3 font-mono text-xs uppercase tracking-wider transition-colors"
+                        style={{
+                          backgroundColor: selected ? d.color + '20' : 'transparent',
+                          color: selected ? d.color : '#555',
+                          borderRight: i < activeProgram.days.length - 1 ? '1px solid #222' : 'none',
+                        }}
+                      >
+                        {d.label}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               <div className="flex gap-3">
