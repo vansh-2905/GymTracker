@@ -72,7 +72,7 @@ export const PRIVACY_POLICY: LegalDoc = {
       paragraphs: [
         'Access: all data the App holds about you is visible inside the App — your profile in Settings, your workouts in the Calendar, and your coach conversations in the Coach tab.',
         'Withdrawal of consent: you can withdraw consent for health-related data at any time by removing your fitness profile information in Settings or by deleting your account. Declining the optional fitness profile never restricts your use of the rest of the App.',
-        `Deletion: you can delete individual workouts, sets, exercises, and coach conversations inside the App. To delete your account and all associated data, contact ${CONTACT_EMAIL}.`,
+        'Deletion: you can delete individual workouts, sets, exercises, and coach conversations inside the App, or delete your entire account and all associated data at any time via Settings → Account → Delete Account.',
         'Depending on where you live, you may have additional rights (such as data portability or the right to lodge a complaint with a supervisory authority). Contact us to exercise them.',
       ],
     },
@@ -80,7 +80,9 @@ export const PRIVACY_POLICY: LegalDoc = {
       heading: 'Data Retention & Deletion',
       paragraphs: [
         'Your data is retained for as long as your account exists so that your workout history remains available to you.',
-        `To delete your account and all associated data, contact us at ${CONTACT_EMAIL} and we will remove it within 30 days.`,
+        'You can permanently delete your account and all associated data yourself, at any time, via Settings → Account → Delete Account. Deletion is immediate and cannot be undone. For security, you will be asked to re-confirm your Google sign-in first.',
+        `If you prefer, you can instead contact us at ${CONTACT_EMAIL} and we will delete your account and data within 30 days.`,
+        'Deletion removes your data from our systems. Residual copies in technical server logs (see "Information We Collect") and any data retained by Anthropic for its limited safety-monitoring period expire on those providers’ standard schedules.',
       ],
     },
     {
@@ -176,7 +178,7 @@ export const TERMS_OF_USE: LegalDoc = {
     {
       heading: 'Termination',
       paragraphs: [
-        'You may stop using the App at any time and request deletion of your data as described in the Privacy Policy. We may suspend or terminate access for misuse of the service.',
+        'You may stop using the App at any time and delete your account and all associated data directly in the App (Settings → Account → Delete Account), or request deletion as described in the Privacy Policy. We may suspend or terminate access for misuse of the service.',
       ],
     },
     {
