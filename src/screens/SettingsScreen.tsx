@@ -11,6 +11,7 @@ import { getFitnessProfile, saveFitnessProfile } from '../services/fitnessProfil
 import { computeUserMetFactor } from '../utils/calorieCalc'
 import { getProgramById, PRESET_PROGRAMS, CUSTOM_PALETTE, makeDayKey } from '../data/programs'
 import { seedProgramExercises } from '../utils/programExercises'
+import { deleteAccount } from '../services/accountService'
 import LegalModal from '../components/LegalModal'
 import { PRIVACY_POLICY, TERMS_OF_USE, type LegalDoc } from '../data/legal'
 import type {
@@ -55,6 +56,10 @@ export default function SettingsScreen() {
   const [savedField, setSavedField] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null)
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deletingAccount, setDeletingAccount] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Program picker state
   const [showProgramPicker, setShowProgramPicker] = useState(false)
@@ -400,12 +405,83 @@ export default function SettingsScreen() {
           </div>
           <button
             onClick={() => signOut()}
-            className="w-full px-4 py-3 font-mono text-[11px] uppercase tracking-widest text-red-400 text-left active:bg-iron-800"
+            className="w-full px-4 py-3 font-mono text-[11px] uppercase tracking-widest text-red-400 text-left border-b border-iron-700 active:bg-iron-800"
           >
             Sign Out
           </button>
+          <button
+            onClick={() => { setDeleteConfirmText(''); setDeleteError(null); setShowDeleteAccount(true) }}
+            className="w-full px-4 py-3 font-mono text-[11px] uppercase tracking-widest text-red-500 text-left active:bg-iron-800"
+          >
+            Delete Account
+          </button>
         </div>
       </div>
+
+      {/* Delete account modal */}
+      {showDeleteAccount && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 px-5">
+          <div className="bg-iron-900 w-full border border-red-600">
+            <div className="p-5">
+              <h2 className="font-display text-3xl text-white mb-2">DELETE ACCOUNT</h2>
+              <p className="font-sans text-iron-300 text-sm mb-3 leading-relaxed">
+                This permanently deletes your account and all your data — every workout,
+                exercise, template, coach conversation, and your fitness profile.
+                This cannot be undone.
+              </p>
+              <p className="font-mono text-iron-400 text-[10px] uppercase tracking-widest mb-2">
+                Type DELETE to confirm
+              </p>
+              <input
+                className="w-full bg-iron-800 border border-iron-600 px-4 py-3 text-white font-mono text-sm tracking-widest outline-none focus:border-red-500 transition-colors mb-3"
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                autoCapitalize="characters"
+              />
+              {deleteError && (
+                <p className="font-mono text-red-400 text-[11px] mb-3">{deleteError}</p>
+              )}
+              <p className="font-mono text-iron-500 text-[10px] leading-relaxed mb-4">
+                You'll be asked to re-confirm your Google sign-in first. Nothing is deleted
+                if you cancel that step.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteAccount(false)}
+                  disabled={deletingAccount}
+                  className="flex-1 py-4 border border-iron-600 font-mono text-xs uppercase tracking-wider text-iron-400"
+                >
+                  Keep Account
+                </button>
+                <button
+                  onClick={async () => {
+                    setDeleteError(null)
+                    setDeletingAccount(true)
+                    try {
+                      await deleteAccount()
+                      // Auth listener takes over: user becomes null → sign-in screen
+                    } catch (err) {
+                      const code = (err as { code?: string }).code
+                      setDeleteError(
+                        code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request'
+                          ? 'Sign-in confirmation was cancelled. Nothing was deleted.'
+                          : 'Deletion failed. Please try again.',
+                      )
+                      setDeletingAccount(false)
+                    }
+                  }}
+                  disabled={deletingAccount || deleteConfirmText.trim().toUpperCase() !== 'DELETE'}
+                  className="flex-1 py-4 bg-red-600 font-sans font-bold uppercase text-sm text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{ letterSpacing: '0.12em' }}
+                >
+                  {deletingAccount ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {legalDoc && <LegalModal doc={legalDoc} onClose={() => setLegalDoc(null)} />}
 
