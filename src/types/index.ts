@@ -43,7 +43,8 @@ export interface FitnessProfile {
 export interface Exercise {
   id: string
   name: string
-  category: WorkoutType
+  /** Day keys this exercise belongs to — an exercise can appear under several workout days. */
+  categories: WorkoutType[]
   muscleGroup: string
   bilateral?: boolean
   timed?: boolean

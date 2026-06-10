@@ -1,5 +1,5 @@
 import {
-  collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, where
+  collection, doc, getDocs, addDoc, updateDoc, deleteDoc, type DocumentData
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import type { Exercise, WorkoutType } from '../types'
@@ -8,15 +8,22 @@ function exercisesCol(uid: string) {
   return collection(db, 'users', uid, 'exercises')
 }
 
-export async function getExercises(uid: string): Promise<Exercise[]> {
-  const snap = await getDocs(exercisesCol(uid))
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as Exercise))
+function mapExerciseDoc(id: string, data: DocumentData): Exercise {
+  return {
+    id,
+    name: data['name'] as string,
+    muscleGroup: data['muscleGroup'] as string,
+    bilateral: data['bilateral'] as boolean | undefined,
+    timed: data['timed'] as boolean | undefined,
+    // Older docs stored a single `category`; normalize to the array form
+    categories: (data['categories'] as WorkoutType[] | undefined) ??
+      (data['category'] ? [data['category'] as WorkoutType] : []),
+  }
 }
 
-export async function getExercisesByCategory(uid: string, category: WorkoutType): Promise<Exercise[]> {
-  const q = query(exercisesCol(uid), where('category', '==', category))
-  const snap = await getDocs(q)
-  return snap.docs.map(d => ({ id: d.id, ...d.data() } as Exercise))
+export async function getExercises(uid: string): Promise<Exercise[]> {
+  const snap = await getDocs(exercisesCol(uid))
+  return snap.docs.map(d => mapExerciseDoc(d.id, d.data()))
 }
 
 export async function addExercise(

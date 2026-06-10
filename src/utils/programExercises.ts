@@ -91,7 +91,7 @@ export async function seedProgramExercises(uid: string, program: WorkoutProgram)
       if (found) {
         ids.push(found.id)
       } else {
-        const created = await addExercise(uid, { name: s.name, muscleGroup: s.muscleGroup, category: day.key })
+        const created = await addExercise(uid, { name: s.name, muscleGroup: s.muscleGroup, categories: [day.key] })
         existing.push(created)
         ids.push(created.id)
       }
