@@ -1,6 +1,6 @@
 import {
   doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc,
-  getDocs, query, orderBy, where, limit, documentId, Timestamp,
+  getDocs, query, orderBy, where, documentId, Timestamp,
   type DocumentData
 } from 'firebase/firestore'
 import { db } from '../firebase'
@@ -131,22 +131,21 @@ export async function deleteWorkout(uid: string, date: string): Promise<void> {
 }
 
 // Returns all sets of the most recent `workoutCount` workouts before `beforeDate`,
-// most recent first. Fetched with one limited query for the dates plus parallel
-// set reads, so callers can derive per-exercise history from a single fetch
-// instead of re-querying the whole history for every exercise.
+// most recent first. One query for the dates plus parallel set reads, so callers
+// can derive per-exercise history from a single fetch instead of re-querying the
+// whole history for every exercise.
 export async function getRecentWorkoutSets(
   uid: string,
   beforeDate: string,
   workoutCount = 10,
 ): Promise<{ date: string; sets: WorkoutSet[] }[]> {
-  const dq = query(
-    workoutsCol(uid),
-    where(documentId(), '<', beforeDate),
-    orderBy(documentId(), 'desc'),
-    limit(workoutCount),
-  )
+  // Firestore rejects descending key scans (a documentId filter combined with
+  // orderBy(documentId, 'desc')), so scan ascending — the default key order —
+  // and keep the most recent dates client-side. Workout docs are small
+  // metadata; sets are only fetched for the kept dates.
+  const dq = query(workoutsCol(uid), where(documentId(), '<', beforeDate))
   const snap = await getDocs(dq)
-  const dates = snap.docs.map(d => d.id)
+  const dates = snap.docs.map(d => d.id).slice(-workoutCount).reverse()
   const setsPerDate = await Promise.all(dates.map(d => getSets(uid, d)))
   return dates.map((date, i) => ({ date, sets: setsPerDate[i] }))
 }

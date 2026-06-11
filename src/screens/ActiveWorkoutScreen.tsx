@@ -107,7 +107,8 @@ export default function ActiveWorkoutScreen() {
     let recent: { date: string; sets: WorkoutSet[] }[]
     try {
       recent = await recentSessionsRef.current
-    } catch {
+    } catch (err) {
+      console.error('Failed to load exercise history', err)
       recentSessionsRef.current = null
       return
     }
