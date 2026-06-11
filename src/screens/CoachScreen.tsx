@@ -78,29 +78,61 @@ export default function CoachScreen() {
     setInput('')
     setSending(true)
 
+    function appendAssistant(content: string) {
+      setMessages(prev => {
+        const next: ChatMessage[] = [...prev, { role: 'assistant', content }]
+        _messagesCache = { uid, messages: next }
+        return next
+      })
+    }
+    function replaceLastAssistant(content: string) {
+      setMessages(prev => {
+        const next: ChatMessage[] = [...prev.slice(0, -1), { role: 'assistant', content }]
+        _messagesCache = { uid, messages: next }
+        return next
+      })
+    }
+
     try {
       const idToken = await user!.getIdToken()
       const history = [...messages, userMsg].slice(-10).map(m => ({ role: m.role, content: m.content }))
-      const res = await fetch('/.netlify/functions/coach', {
+      const res = await fetch('/api/coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken, message: text.trim(), history }),
       })
-      // Netlify timeouts return non-JSON error pages — don't let parsing throw
-      const data = (await res.json().catch(() => null)) as { reply?: string; error?: string } | null
-      const reply =
-        data?.reply ??
-        data?.error ??
-        (res.status === 502 || res.status === 504
-          ? 'That one took too long to answer — try asking again, or narrow the question (e.g. a shorter date range).'
-          : 'Something went wrong — try again.')
-      const assistantMsg: ChatMessage = { role: 'assistant', content: reply }
-      await addDoc(messagesCol(uid), { ...assistantMsg, createdAt: serverTimestamp() })
-      setMessages(prev => {
-        const next = [...prev, assistantMsg]
-        _messagesCache = { uid, messages: next }
-        return next
-      })
+      if (!res.ok || !res.body) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null
+        appendAssistant(data?.error ?? 'Something went wrong — try again.')
+        return
+      }
+
+      // The edge function streams the reply as plain text — render it as it arrives
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let reply = ''
+      let started = false
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = decoder.decode(value, { stream: true })
+        if (!chunk) continue
+        reply += chunk
+        if (started) replaceLastAssistant(reply)
+        else {
+          started = true
+          appendAssistant(reply)
+        }
+      }
+      reply = (reply + decoder.decode()).trim()
+
+      if (!reply) {
+        if (started) replaceLastAssistant('Something went wrong — try again.')
+        else appendAssistant('Something went wrong — try again.')
+        return
+      }
+      replaceLastAssistant(reply)
+      await addDoc(messagesCol(uid), { role: 'assistant', content: reply, createdAt: serverTimestamp() })
     } catch {
       const errMsg: ChatMessage = {
         role: 'assistant',
@@ -203,7 +235,7 @@ export default function CoachScreen() {
                 </div>
               </div>
             ))}
-            {sending && (
+            {sending && messages[messages.length - 1]?.role !== 'assistant' && (
               <div className="flex justify-start">
                 <div className="bg-iron-800 px-4 py-3 flex gap-1.5 items-center">
                   {[0, 1, 2].map(i => (
