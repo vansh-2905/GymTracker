@@ -101,6 +101,23 @@ const tools: Anthropic.Tool[] = [
   },
 ]
 
+// Tool results are sent to the model as JSON — strip ids and Timestamp objects
+// and drop undefined fields to keep payloads small. Smaller input plus capped
+// output is what keeps the whole request inside Netlify's ~10s function limit.
+function slimSet(data: FirebaseFirestore.DocumentData): Record<string, unknown> {
+  const { exerciseName, setNumber, reps, weight, sides, isTimed, activeDuration, restDuration, kcal } = data
+  return { exerciseName, setNumber, reps, weight, sides, isTimed, activeDuration, restDuration, kcal }
+}
+
+function slimWorkout(date: string, data: FirebaseFirestore.DocumentData): Record<string, unknown> {
+  return { date, type: data.type, completed: data.completed }
+}
+
+async function getSlimSets(uid: string, date: string): Promise<Record<string, unknown>[]> {
+  const snap = await db.collection(`users/${uid}/workouts/${date}/sets`).get()
+  return snap.docs.map(d => slimSet(d.data()))
+}
+
 async function executeTool(
   name: string,
   input: Record<string, unknown>,
@@ -111,9 +128,8 @@ async function executeTool(
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: 'Invalid date format' }
     const workoutSnap = await db.doc(`users/${uid}/workouts/${date}`).get()
     if (!workoutSnap.exists) return { workout: null, sets: [] }
-    const setsSnap = await db.collection(`users/${uid}/workouts/${date}/sets`).get()
-    const sets = setsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-    return { workout: { date, ...workoutSnap.data() }, sets }
+    const sets = await getSlimSets(uid, date)
+    return { workout: slimWorkout(date, workoutSnap.data()!), sets }
   }
 
   if (name === 'getWorkoutsInRange') {
@@ -122,18 +138,18 @@ async function executeTool(
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
       return { error: 'Invalid date format' }
     }
-    const workoutsSnap = await db.collection(`users/${uid}/workouts`).get()
-    const inRange = workoutsSnap.docs.filter(d => d.id >= startDate && d.id <= endDate)
-    const results = await Promise.all(
-      inRange.map(async workoutDoc => {
-        const setsSnap = await db
-          .collection(`users/${uid}/workouts/${workoutDoc.id}/sets`)
-          .get()
-        const sets = setsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-        return { date: workoutDoc.id, ...workoutDoc.data(), sets }
-      })
+    // Range query on document IDs (dates) instead of scanning the whole collection
+    const workoutsSnap = await db
+      .collection(`users/${uid}/workouts`)
+      .where(admin.firestore.FieldPath.documentId(), '>=', startDate)
+      .where(admin.firestore.FieldPath.documentId(), '<=', endDate)
+      .get()
+    return Promise.all(
+      workoutsSnap.docs.map(async workoutDoc => ({
+        ...slimWorkout(workoutDoc.id, workoutDoc.data()),
+        sets: await getSlimSets(uid, workoutDoc.id),
+      }))
     )
-    return results.sort((a, b) => (a.date as string).localeCompare(b.date as string))
   }
 
   if (name === 'getExerciseHistory') {
@@ -143,21 +159,18 @@ async function executeTool(
     const sortedDates = workoutsSnap.docs
       .map(d => d.id)
       .sort((a, b) => b.localeCompare(a))
-      .slice(0, 200)
+      .slice(0, 60)
 
-    const results: { date: string; sets: unknown[] }[] = []
-    for (const date of sortedDates) {
-      if (results.length >= limit) break
-      const setsSnap = await db.collection(`users/${uid}/workouts/${date}/sets`).get()
-      const matching = setsSnap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .filter(s => {
-          const name = (s as Record<string, unknown>)['exerciseName']
-          return typeof name === 'string' && name.toLowerCase().includes(exerciseName)
-        })
-      if (matching.length > 0) results.push({ date, sets: matching })
-    }
-    return results
+    // Fetch in parallel — the previous sequential loop took seconds on its own
+    const byDate = await Promise.all(
+      sortedDates.map(async date => ({
+        date,
+        sets: (await getSlimSets(uid, date)).filter(s =>
+          typeof s.exerciseName === 'string' && (s.exerciseName as string).toLowerCase().includes(exerciseName)
+        ),
+      }))
+    )
+    return byDate.filter(r => r.sets.length > 0).slice(0, limit)
   }
 
   return { error: `Unknown tool: ${name}` }
@@ -225,7 +238,7 @@ export const handler: Handler = async event => {
 
     let response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
+      max_tokens: 1000,
       system: systemPrompt,
       tools,
       messages,
@@ -250,7 +263,7 @@ export const handler: Handler = async event => {
       messages.push({ role: 'user', content: toolResults })
       response = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 2048,
+        max_tokens: 1000,
         system: systemPrompt,
         tools,
         messages,

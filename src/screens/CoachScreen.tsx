@@ -86,8 +86,14 @@ export default function CoachScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken, message: text.trim(), history }),
       })
-      const data = (await res.json()) as { reply?: string; error?: string }
-      const reply = data.reply ?? 'Something went wrong — try again.'
+      // Netlify timeouts return non-JSON error pages — don't let parsing throw
+      const data = (await res.json().catch(() => null)) as { reply?: string; error?: string } | null
+      const reply =
+        data?.reply ??
+        data?.error ??
+        (res.status === 502 || res.status === 504
+          ? 'That one took too long to answer — try asking again, or narrow the question (e.g. a shorter date range).'
+          : 'Something went wrong — try again.')
       const assistantMsg: ChatMessage = { role: 'assistant', content: reply }
       await addDoc(messagesCol(uid), { ...assistantMsg, createdAt: serverTimestamp() })
       setMessages(prev => {
