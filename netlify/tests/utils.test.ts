@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
-import { buildSystemPrompt } from '../functions/utils'
+import { buildSystemPrompt } from '../lib/utils'
 
 describe('buildSystemPrompt', () => {
   it('includes today date', () => {
